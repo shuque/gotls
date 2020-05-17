@@ -15,9 +15,10 @@ Usage: gotls [Options] <host> [<port>]
         Options:
         -h          Print this help string
         -m mode     Mode: "dane" or "pkix"
-        -r ip       DNS Resolver IP address
+	-s starttls STARTTLS application: smtp/imap/pop
         -4          Use IPv4 transport only
         -6          Use IPv6 transport only
+        -r ip       DNS Resolver IP address
         -t N        Query timeout value in seconds (default 3)
 ```
 

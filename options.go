@@ -20,6 +20,7 @@ type OptionsStruct struct {
 	useV6    bool
 	dane     bool
 	pkix     bool
+	starttls string
 	timeout  time.Duration
 	retries  int
 	resolver net.IP
@@ -40,6 +41,7 @@ func parseArgs(args []string) (server string, port int) {
 	flag.BoolVar(&Options.useV6, "6", false, "use IPv6 only")
 	flag.BoolVar(&Options.useV4, "4", false, "use IPv4 only")
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
+	flag.StringVar(&Options.starttls, "s", "", "STARTTLS app: smtp/imap/pop")
 	tmpString := flag.String("r", "", "Resolver IP address")
 	tmpInt := flag.Int("t", defaultDNSTimeout, "query timeout in seconds")
 
@@ -53,9 +55,10 @@ Usage: %s [Options] <host> [<port>]
 	Options:
 	-h          Print this help string
 	-m mode     Mode: "dane" or "pkix"
-	-r ip       DNS Resolver IP address
+	-s starttls STARTTLS application: smtp/imap/pop
 	-4          Use IPv4 transport only
 	-6          Use IPv6 transport only
+	-r ip       DNS Resolver IP address
 	-t N        Query timeout value in seconds (default %d)
 `, Progname, Version, Progname, defaultDNSTimeout)
 	}

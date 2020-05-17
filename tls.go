@@ -364,11 +364,27 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 }
 
 //
-// checkTLS - check server TLS and certificate config
+// printConnectionDetails -
 //
-func checkTLS(server string, serverIP net.IP, port int) error {
+func printConnectionDetails(cs tls.ConnectionState) {
 
 	var peerCerts []*x509.Certificate
+
+	fmt.Printf("## TLS Connection Info:\n")
+	fmt.Printf("   TLS version: %s\n", TLSversion[cs.Version])
+	fmt.Printf("   CipherSuite: %s\n", tls.CipherSuiteName(cs.CipherSuite))
+	if cs.NegotiatedProtocol != "" {
+		fmt.Printf("NegotiatedProtocol: %s\n", cs.NegotiatedProtocol)
+	}
+	peerCerts = cs.PeerCertificates
+	printCertDetails(peerCerts[0])
+	return
+}
+
+//
+// getTLSconfig -
+//
+func getTLSconfig(server string) *tls.Config {
 
 	config := new(tls.Config)
 	config.ServerName = server
@@ -381,26 +397,34 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 		verifiedChains [][]*x509.Certificate) error {
 		return verifyServer(rawCerts, verifiedChains, config)
 	}
+	return config
+}
 
-	dialer := new(net.Dialer)
-	dialer.Timeout = time.Second * time.Duration(defaultTCPTimeout)
-	conn, err := tls.DialWithDialer(dialer, "tcp", addressString(serverIP, port), config)
-	if err != nil {
-		return fmt.Errorf("failed to connect to %s, %s: %s",
-			server, serverIP, err.Error())
+//
+// checkTLS - check server TLS and certificate config
+//
+func checkTLS(server string, serverIP net.IP, port int) error {
+
+	var err error
+	config := getTLSconfig(server)
+
+	if Options.starttls != "" {
+		err = startTLS(config, Options.starttls, server, serverIP, port)
+		if err != nil {
+			return fmt.Errorf("starttls error: %s", err.Error())
+		}
+	} else {
+		dialer := new(net.Dialer)
+		dialer.Timeout = time.Second * time.Duration(defaultTCPTimeout)
+		conn, err := tls.DialWithDialer(dialer, "tcp", addressString(serverIP, port), config)
+		if err != nil {
+			return fmt.Errorf("failed to connect to %s, %s: %s",
+				server, serverIP, err.Error())
+		}
+		cs := conn.ConnectionState()
+		printConnectionDetails(cs)
+		conn.Close()
 	}
 
-	cs := conn.ConnectionState()
-	fmt.Printf("## TLS Connection Info:\n")
-	fmt.Printf("   TLS version: %s\n", TLSversion[cs.Version])
-	fmt.Printf("   CipherSuite: %s\n", tls.CipherSuiteName(cs.CipherSuite))
-	if cs.NegotiatedProtocol != "" {
-		fmt.Printf("NegotiatedProtocol: %s\n", cs.NegotiatedProtocol)
-	}
-
-	peerCerts = cs.PeerCertificates
-	printCertDetails(peerCerts[0])
-
-	conn.Close()
 	return err
 }
