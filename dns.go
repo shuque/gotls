@@ -123,6 +123,7 @@ func (t *TLSAinfo) Print() {
 // GetResolver - obtain (1st) system default resolver address
 //
 func getResolver() (resolver net.IP, err error) {
+
 	config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err == nil {
 		resolver = net.ParseIP(config.Servers[0])
@@ -134,6 +135,7 @@ func getResolver() (resolver net.IP, err error) {
 // MakeQuery - construct a DNS query MakeMessage
 //
 func makeQuery(query Query, qopts QueryOptions) *dns.Msg {
+
 	m := new(dns.Msg)
 	m.Id = dns.Id()
 	if qopts.rdflag {
@@ -230,7 +232,6 @@ func sendQuery(query Query, resolver net.IP, qopts QueryOptions) (*dns.Msg, erro
 		return nil, fmt.Errorf("Error: null DNS response to query")
 	}
 	return response, err
-
 }
 
 //
@@ -244,7 +245,6 @@ func responseOK(response *dns.Msg) bool {
 	default:
 		return false
 	}
-
 }
 
 //
@@ -292,7 +292,6 @@ func getAddresses(resolver net.IP, hostname string) ([]net.IP, error) {
 	}
 
 	return ipList, nil
-
 }
 
 //

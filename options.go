@@ -126,5 +126,4 @@ Usage: %s [Options] <host> [<port>]
 	}
 
 	return dns.Fqdn(server), port
-
 }

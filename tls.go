@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 )
 
 //
@@ -69,6 +70,7 @@ var ExtendedKeyUsage = map[x509.ExtKeyUsage]string{
 // KU2Strings -
 //
 func KU2Strings(ku x509.KeyUsage) string {
+
 	var result []string
 	for k, v := range KeyUsage {
 		if ku&k == k {
@@ -82,6 +84,7 @@ func KU2Strings(ku x509.KeyUsage) string {
 // EKU2Strings -
 //
 func EKU2Strings(ekulist []x509.ExtKeyUsage) string {
+
 	var result []string
 	for _, eku := range ekulist {
 		result = append(result, ExtendedKeyUsage[eku])
@@ -128,7 +131,6 @@ func printCertDetails(cert *x509.Certificate) {
 	fmt.Printf("   CRL Distribution: %v\n", cert.CRLDistributionPoints)
 	fmt.Printf("   Policy OIDs: %v\n", cert.PolicyIdentifiers)
 	return
-
 }
 
 //
@@ -267,6 +269,7 @@ func printPKIXVerifiedChains(chains [][]*x509.Certificate) {
 			fmt.Printf("     %v\n", cert.Issuer)
 		}
 	}
+	return
 }
 
 //
@@ -379,7 +382,9 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 		return verifyServer(rawCerts, verifiedChains, config)
 	}
 
-	conn, err := tls.Dial("tcp", addressString(serverIP, port), config)
+	dialer := new(net.Dialer)
+	dialer.Timeout = time.Second * time.Duration(defaultTCPTimeout)
+	conn, err := tls.DialWithDialer(dialer, "tcp", addressString(serverIP, port), config)
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s, %s: %s",
 			server, serverIP, err.Error())

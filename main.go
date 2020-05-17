@@ -17,7 +17,7 @@ var Progname string = path.Base(os.Args[0])
 var (
 	defaultDNSTimeout = 3
 	defaultDNSRetries = 3
-	defaultTCPTimeout = 3
+	defaultTCPTimeout = 4
 )
 
 // Globals
