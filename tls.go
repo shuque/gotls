@@ -273,12 +273,12 @@ func printPKIXVerifiedChains(chains [][]*x509.Certificate) {
 }
 
 //
-// verifyPKIX -
+// verifyChain -
 // Perform PKIX certificate chain validation of the given chain (certs)
 // If "root" is true, then use the systems root certificate store. Otherwise,
 // set the tail certificate of the chain as the root (self signed mode)
 //
-func verifyPKIX(certs []*x509.Certificate, config *tls.Config,
+func verifyChain(certs []*x509.Certificate, config *tls.Config,
 	root bool) ([][]*x509.Certificate, error) {
 
 	var verifiedChains [][]*x509.Certificate
@@ -333,7 +333,7 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 		fmt.Printf("     %v\n", cert.Issuer)
 	}
 
-	verifiedChains, err = verifyPKIX(certs, config, true)
+	verifiedChains, err = verifyChain(certs, config, true)
 	if err == nil {
 		okpkix = true
 		printPKIXVerifiedChains(verifiedChains)
@@ -344,8 +344,8 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 	}
 
 	fmt.Printf("## DANE TLS authentication result:\n")
-	if !okpkix && len(certs) > 1 {
-		verifiedChains, err = verifyPKIX(certs, config, false)
+	if !okpkix && len(certs) > 0 {
+		verifiedChains, err = verifyChain(certs, config, false)
 		if err != nil {
 			return fmt.Errorf("DANE TLS error: cert chain: %s", err.Error())
 		}
@@ -401,6 +401,16 @@ func getTLSconfig(server string) *tls.Config {
 }
 
 //
+// getDialer -
+//
+func getDialer(timeout int) *net.Dialer {
+
+	dialer := new(net.Dialer)
+	dialer.Timeout = time.Second * time.Duration(timeout)
+	return dialer
+}
+
+//
 // checkTLS - check server TLS and certificate config
 //
 func checkTLS(server string, serverIP net.IP, port int) error {
@@ -414,9 +424,9 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 			return fmt.Errorf("starttls error: %s", err.Error())
 		}
 	} else {
-		dialer := new(net.Dialer)
-		dialer.Timeout = time.Second * time.Duration(defaultTCPTimeout)
-		conn, err := tls.DialWithDialer(dialer, "tcp", addressString(serverIP, port), config)
+		dialer := getDialer(defaultTCPTimeout)
+		conn, err := tls.DialWithDialer(dialer, "tcp",
+			addressString(serverIP, port), config)
 		if err != nil {
 			return fmt.Errorf("failed to connect to %s, %s: %s",
 				server, serverIP, err.Error())

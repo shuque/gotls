@@ -4,7 +4,31 @@ gotls connects to a TLS server, performs DANE/PKIX authentication of
 the server certificate chain, and then prints out information about
 the TLS connection and the certificate.
 
-Usage:
+
+### Pre-requisites
+
+* Go
+* Miek Gieben's Go dns package: https://github.com/miekg/dns
+
+DANE authentication requires the use of a validating DNS resolver,
+that sets the AD bit on authenticated responses. By default, this
+program uses the first resolver listed in /etc/resolv.conf. If
+the resolver doesn't validate, the program will fallback to normal
+PKIX authentication (unless the "-m dane" switch is provided which
+forces DANE). The "-r" option can be used to specify an alternative
+DNS resolver IP address.
+
+### Limitations
+
+gotls does not do certificate revocation checks (CRL, OCSP, or
+staped OCSP response). A future version might.
+
+
+### Building
+
+Just run 'go build'. This will generate the executable 'gotls'.
+
+### Usage:
 
 ```
 gotls, version 0.1.0
@@ -15,12 +39,15 @@ Usage: gotls [Options] <host> [<port>]
         Options:
         -h          Print this help string
         -m mode     Mode: "dane" or "pkix"
-	-s starttls STARTTLS application: smtp/imap/pop
+	-s starttls STARTTLS application (smtp, imap, pop3)
+	-n name     Service name (if different from hostname)
         -4          Use IPv4 transport only
         -6          Use IPv6 transport only
         -r ip       DNS Resolver IP address
         -t N        Query timeout value in seconds (default 3)
 ```
+
+### Example runs:
 
 An example run:
 

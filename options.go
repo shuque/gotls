@@ -18,6 +18,7 @@ type OptionsStruct struct {
 	verbose  bool
 	useV4    bool
 	useV6    bool
+	sname    string
 	dane     bool
 	pkix     bool
 	starttls string
@@ -41,7 +42,8 @@ func parseArgs(args []string) (server string, port int) {
 	flag.BoolVar(&Options.useV6, "6", false, "use IPv6 only")
 	flag.BoolVar(&Options.useV4, "4", false, "use IPv4 only")
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
-	flag.StringVar(&Options.starttls, "s", "", "STARTTLS app: smtp/imap/pop")
+	flag.StringVar(&Options.starttls, "s", "", "STARTTLS app (smtp,imap,pop3)")
+	flag.StringVar(&Options.sname, "n", "", "Service name")
 	tmpString := flag.String("r", "", "Resolver IP address")
 	tmpInt := flag.Int("t", defaultDNSTimeout, "query timeout in seconds")
 
@@ -55,7 +57,8 @@ Usage: %s [Options] <host> [<port>]
 	Options:
 	-h          Print this help string
 	-m mode     Mode: "dane" or "pkix"
-	-s starttls STARTTLS application: smtp/imap/pop
+	-s starttls STARTTLS application (smtp, imap, pop3)
+	-n name     Service name (if different from hostname)
 	-4          Use IPv4 transport only
 	-6          Use IPv6 transport only
 	-r ip       DNS Resolver IP address
