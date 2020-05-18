@@ -10,6 +10,21 @@ import (
 )
 
 //
+// TLShandshake -
+//
+func TLShandshake(conn net.Conn, config *tls.Config) error {
+
+	tlsconn := tls.Client(conn, config)
+	err := tlsconn.Handshake()
+	if err != nil {
+		return fmt.Errorf("TLS handshake failed: %s", err.Error())
+	}
+	printConnectionDetails(tlsconn.ConnectionState())
+	tlsconn.Close()
+	return err
+}
+
+//
 // DoPOP3 -
 //
 func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port int) error {
@@ -39,13 +54,8 @@ func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port
 	if !strings.HasPrefix(line, "+OK") {
 		return fmt.Errorf("POP3 STARTTLS unavailable")
 	}
-	tlsconn := tls.Client(conn, config)
-	err = tlsconn.Handshake()
-	if err != nil {
-		return fmt.Errorf("TLS handshake failed: %s", err.Error())
-	}
-	printConnectionDetails(tlsconn.ConnectionState())
-	tlsconn.Close()
+
+	err = TLShandshake(conn, config)
 	return err
 }
 
@@ -100,13 +110,8 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 	if !strings.HasPrefix(line, ". OK") {
 		return fmt.Errorf("STARTTLS failed to negotiate")
 	}
-	tlsconn := tls.Client(conn, config)
-	err = tlsconn.Handshake()
-	if err != nil {
-		return fmt.Errorf("TLS handshake failed: %s", err.Error())
-	}
-	printConnectionDetails(tlsconn.ConnectionState())
-	tlsconn.Close()
+
+	err = TLShandshake(conn, config)
 	return err
 }
 
@@ -198,13 +203,8 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 	if replycode != 220 {
 		return fmt.Errorf("invalid reply code in STARTTLS response")
 	}
-	tlsconn := tls.Client(conn, config)
-	err = tlsconn.Handshake()
-	if err != nil {
-		return fmt.Errorf("TLS handshake failed: %s", err.Error())
-	}
-	printConnectionDetails(tlsconn.ConnectionState())
-	tlsconn.Close()
+
+	err = TLShandshake(conn, config)
 	return err
 }
 

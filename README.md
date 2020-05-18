@@ -21,7 +21,7 @@ DNS resolver IP address.
 ### Limitations
 
 gotls does not do certificate revocation checks (CRL, OCSP, or
-staped OCSP response). A future version might.
+stapled OCSP response). A future version might.
 
 
 ### Building
@@ -49,7 +49,7 @@ Usage: gotls [Options] <host> [<port>]
 
 ### Example runs:
 
-An example run:
+Check the HTTPS (port 443) TLS service at www.huque.com:
 
 ```
 $ gotls www.huque.com
@@ -138,4 +138,68 @@ DNS TLSA RRset:
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
 
 [0] Authentication succeeded for all (2) peers.
+```
+
+Check only the IPv6 SMTP STARTTLS service at mta.openssl.org:
+
+```
+$ gotls -6 -s smtp mta.openssl.org 25
+
+DNS TLSA RRset:
+  qname: _25._tcp.mta.openssl.org.
+  3 1 1 6cf12d78fbf242909d01b96ab5590812954058dc32f8415f048fff064291921e
+
+## Checking mta.openssl.org. 2001:608:c00:180::1:e6 port 25
+## STARTTLS application: smtp
+recv: 220 mta.openssl.org ESMTP Postfix
+send: EHLO localhost
+recv: 250-mta.openssl.org
+recv: 250-PIPELINING
+recv: 250-SIZE 36700160
+recv: 250-VRFY
+recv: 250-ETRN
+recv: 250-STARTTLS
+recv: 250-ENHANCEDSTATUSCODES
+recv: 250-8BITMIME
+recv: 250 DSN
+send: STARTTLS
+recv: 220 2.0.0 Ready to start TLS
+## Peer Certificate Chain:
+   0 CN=mta.openssl.org
+     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+     CN=DST Root CA X3,O=Digital Signature Trust Co.
+## PKIX Verified Chain 0:
+   0 CN=mta.openssl.org
+     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+     CN=DST Root CA X3,O=Digital Signature Trust Co.
+   2 CN=DST Root CA X3,O=Digital Signature Trust Co.
+     CN=DST Root CA X3,O=Digital Signature Trust Co.
+## DANE TLS authentication result:
+   OK:   DANE TLSA 3 1 1 [6cf12d78..] matched EE certificate.
+## TLS Connection Info:
+   TLS version: TLS1.2
+   CipherSuite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+## Certificate Info:
+   X509 version: 3
+   Serial#: 3052db8c7f9b73c1a94b78535ab43bcacef
+   Subject: CN=mta.openssl.org
+   Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+   SAN dNSName: mta.openssl.org
+   Signature Algorithm: SHA256-RSA
+   PublicKey Algorithm: RSA
+   Inception:  2020-04-22 23:00:11 +0000 UTC
+   Expiration: 2020-07-21 23:00:11 +0000 UTC
+   KU: DigitalSignature KeyEncipherment
+   EKU: ServerAuth ClientAuth
+   Is CA?: false
+   SKI: e27f74ac4c9b0c6694d6af580f005d7f34e0e80c
+   AKI: a84a6a63047dddbae6d139b7a64565eff3a8eca1
+   OSCP Servers: [http://ocsp.int-x3.letsencrypt.org]
+   CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
+   CRL Distribution: []
+   Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
+
+[0] Authentication succeeded for all (1) peers.
 ```

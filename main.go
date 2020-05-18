@@ -1,3 +1,11 @@
+/*
+ * gotls
+ * Diagnostic tool that connects to a TLS server, performs DANE and PKIX
+ * authentication of the server of the server, and prints miscellaneous
+ * information about the certificates and DANE records.
+ *
+ */
+
 package main
 
 import (
