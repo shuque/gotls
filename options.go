@@ -15,16 +15,20 @@ import (
 // OptionsStruct - options
 //
 type OptionsStruct struct {
-	verbose  bool
-	useV4    bool
-	useV6    bool
-	sname    string
-	dane     bool
-	pkix     bool
-	starttls string
-	timeout  time.Duration
-	retries  int
-	resolver net.IP
+	verbose     bool
+	useV4       bool
+	useV6       bool
+	sname       string
+	dane        bool
+	pkix        bool
+	daneEEname  bool
+	noverify    bool
+	smtpAnyMode bool
+	starttls    string
+	timeout     time.Duration
+	retries     int
+	resolver    net.IP
+	printchain  bool
 }
 
 // Options -
@@ -46,6 +50,10 @@ func parseArgs(args []string) (server string, port int) {
 	flag.StringVar(&Options.sname, "n", "", "Service name")
 	tmpString := flag.String("r", "", "Resolver IP address")
 	tmpInt := flag.Int("t", defaultDNSTimeout, "query timeout in seconds")
+	flag.BoolVar(&Options.daneEEname, "dane-ee-name", false, "DANE EE name")
+	flag.BoolVar(&Options.smtpAnyMode, "smtp-any-mode", false, "SMTP any mode")
+	flag.BoolVar(&Options.noverify, "noverify", false, "noverify")
+	flag.BoolVar(&Options.printchain, "printchain", false, "printchain")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `
@@ -55,14 +63,18 @@ Usage: %s [Options] <host> [<port>]
 	If unspecified, the default port 443 is used.
 
 	Options:
-	-h          Print this help string
-	-m mode     Mode: "dane" or "pkix"
-	-s starttls STARTTLS application (smtp, imap, pop3)
-	-n name     Service name (if different from hostname)
-	-4          Use IPv4 transport only
-	-6          Use IPv6 transport only
-	-r ip       DNS Resolver IP address
-	-t N        Query timeout value in seconds (default %d)
+	-h               Print this help string
+	-m mode          Mode: "dane" or "pkix"
+	-s starttls      STARTTLS application (smtp, imap, pop3)
+	-n name          Service name (if different from hostname)
+	-4               Use IPv4 transport only
+	-6               Use IPv6 transport only
+	-r ip            DNS Resolver IP address
+	-t N             Query timeout value in seconds (default %d)
+	-dane-ee-name    Do hostname check even for DANE-EE mode
+	-smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
+	-noverify        Don't perform server certificate verification
+	-printchain      Print details of full certificate chain
 `, Progname, Version, Progname, defaultDNSTimeout)
 	}
 
@@ -127,6 +139,7 @@ Usage: %s [Options] <host> [<port>]
 			os.Exit(3)
 		}
 	} else {
+		fmt.Printf("Invalid arguments\n")
 		flag.Usage()
 		os.Exit(3)
 	}

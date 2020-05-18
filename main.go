@@ -29,6 +29,7 @@ var (
 )
 
 // Globals
+var debug = false
 var qopts = QueryOptions{adflag: true,
 	rdflag:  true,
 	payload: 1460,
@@ -51,6 +52,7 @@ func main() {
 		tlsa, err = getTLSA(Options.resolver, server, port)
 		if err != nil {
 			fmt.Printf("%s. Use \"-m pkix\" for PKIX only.\n", err)
+			fmt.Printf("\n[2] Authentication failed.\n")
 			os.Exit(2)
 		}
 		if tlsa != nil {
@@ -60,6 +62,7 @@ func main() {
 				fmt.Printf("No DANE TLSA records found. Falling back to PKIX-only.\n")
 			} else {
 				fmt.Printf("No DANE TLSA records found. Aborting.\n")
+				fmt.Printf("\n[2] Authentication failed.\n")
 				os.Exit(2)
 			}
 		}
@@ -87,7 +90,10 @@ func main() {
 		}
 	}
 
-	if countSuccess == countIP {
+	if Options.noverify {
+		fmt.Printf("\n[4] Server authentication was not performed.\n")
+		os.Exit(4)
+	} else if countSuccess == countIP {
 		fmt.Printf("\n[0] Authentication succeeded for all (%d) peers.\n", countIP)
 		os.Exit(0)
 	} else if countSuccess > 0 {

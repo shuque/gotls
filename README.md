@@ -34,18 +34,33 @@ Just run 'go build'. This will generate the executable 'gotls'.
 gotls, version 0.1.0
 Usage: gotls [Options] <host> [<port>]
 
-        If unspecified, the default port 443 is used.
+       If unspecified, the default port 443 is used.
 
-        Options:
-        -h          Print this help string
-        -m mode     Mode: "dane" or "pkix"
-	-s starttls STARTTLS application (smtp, imap, pop3)
-	-n name     Service name (if different from hostname)
-        -4          Use IPv4 transport only
-        -6          Use IPv6 transport only
-        -r ip       DNS Resolver IP address
-        -t N        Query timeout value in seconds (default 3)
+       Options:
+       -h               Print this help string
+       -m mode          Mode: "dane" or "pkix"
+       -s starttls      STARTTLS application (smtp, imap, pop3)
+       -n name          Service name (if different from hostname)
+       -4               Use IPv4 transport only
+       -6               Use IPv6 transport only
+       -r ip            DNS Resolver IP address
+       -t N             Query timeout value in seconds (default 3)
+       -dane-ee-name    Do hostname check even for DANE-EE mode
+       -smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
+       -noverify        Don't perform server certificate verification
+       -printchain      Print details of full certificate chain
 ```
+
+### Exit codes:
+
+The program exits with the following codes:
+
+* 0 - Authentication succeeded for all peers.
+* 1 - Authentication succeeded for some but not all peers
+* 2 - Authentication failed for all peers
+* 3 - Some other error (incorrect command line arguments, etc)
+* 4 - Server authentication was not performed. (-noverify option)
+
 
 ### Example runs:
 

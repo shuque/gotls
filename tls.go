@@ -98,7 +98,6 @@ func EKU2Strings(ekulist []x509.ExtKeyUsage) string {
 //
 func printCertDetails(cert *x509.Certificate) {
 
-	fmt.Printf("## Certificate Info:\n")
 	fmt.Printf("   X509 version: %d\n", cert.Version)
 	fmt.Printf("   Serial#: %x\n", cert.SerialNumber)
 	fmt.Printf("   Subject: %v\n", cert.Subject)
@@ -130,6 +129,19 @@ func printCertDetails(cert *x509.Certificate) {
 	fmt.Printf("   CA Issuer URL: %v\n", cert.IssuingCertificateURL)
 	fmt.Printf("   CRL Distribution: %v\n", cert.CRLDistributionPoints)
 	fmt.Printf("   Policy OIDs: %v\n", cert.PolicyIdentifiers)
+	return
+}
+
+//
+// printCertChainDetails -
+//
+func printCertChainDetails(chain []*x509.Certificate) {
+
+	fmt.Printf("## -------------- FULL Certificate Chain ----------------\n")
+	for i, cert := range chain {
+		fmt.Printf("## Certificate at Depth: %d\n", i)
+		printCertDetails(cert)
+	}
 	return
 }
 
@@ -186,10 +198,12 @@ func chainMatchesTLSA(chain []*x509.Certificate, tlsaRdata *TLSArdata) bool {
 		}
 		if hash == tlsaRdata.data {
 			fmt.Printf("   OK:   %s matched EE certificate.\n", tlsaRdata)
-			if tlsaRdata.usage == 1 && okpkix {
+			if tlsaRdata.usage == 3 {
 				Authenticated = true
-			} else if tlsaRdata.usage == 3 {
+			} else if okpkix {
 				Authenticated = true
+			} else {
+				fmt.Printf("   WARN:   but PKIX auth fails.\n")
 			}
 		}
 	case 0, 2:
@@ -201,10 +215,12 @@ func chainMatchesTLSA(chain []*x509.Certificate, tlsaRdata *TLSArdata) bool {
 			}
 			if hash == tlsaRdata.data {
 				fmt.Printf("   OK:   %s matched certificate at depth %d.\n", tlsaRdata, i+1)
-				if tlsaRdata.usage == 0 && okpkix {
+				if tlsaRdata.usage == 2 {
 					Authenticated = true
-				} else if tlsaRdata.usage == 2 {
+				} else if okpkix {
 					Authenticated = true
+				} else {
+					fmt.Printf("   WARN:   but PKIX auth fails.\n")
 				}
 			}
 		}
@@ -333,6 +349,10 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 		fmt.Printf("     %v\n", cert.Issuer)
 	}
 
+	if Options.noverify {
+		return nil
+	}
+
 	verifiedChains, err = verifyChain(certs, config, true)
 	if err == nil {
 		okpkix = true
@@ -376,8 +396,14 @@ func printConnectionDetails(cs tls.ConnectionState) {
 	if cs.NegotiatedProtocol != "" {
 		fmt.Printf("NegotiatedProtocol: %s\n", cs.NegotiatedProtocol)
 	}
+
 	peerCerts = cs.PeerCertificates
-	printCertDetails(peerCerts[0])
+	if Options.printchain {
+		printCertChainDetails(peerCerts)
+	} else {
+		fmt.Printf("## End-Entity Certificate Info:\n")
+		printCertDetails(peerCerts[0])
+	}
 	return
 }
 
@@ -388,7 +414,7 @@ func getTLSconfig(server string) *tls.Config {
 
 	config := new(tls.Config)
 	config.ServerName = server
-	if Options.dane {
+	if Options.dane || Options.noverify {
 		config.InsecureSkipVerify = true
 	} else {
 		config.InsecureSkipVerify = false
@@ -421,15 +447,14 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 	if Options.starttls != "" {
 		err = startTLS(config, Options.starttls, server, serverIP, port)
 		if err != nil {
-			return fmt.Errorf("starttls error: %s", err.Error())
+			return fmt.Errorf("%s, %s: %s", server, serverIP, err.Error())
 		}
 	} else {
 		dialer := getDialer(defaultTCPTimeout)
 		conn, err := tls.DialWithDialer(dialer, "tcp",
 			addressString(serverIP, port), config)
 		if err != nil {
-			return fmt.Errorf("failed to connect to %s, %s: %s",
-				server, serverIP, err.Error())
+			return fmt.Errorf("%s, %s: %s", server, serverIP, err.Error())
 		}
 		cs := conn.ConnectionState()
 		printConnectionDetails(cs)
