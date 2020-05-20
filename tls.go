@@ -414,11 +414,7 @@ func getTLSconfig(server string) *tls.Config {
 
 	config := new(tls.Config)
 	config.ServerName = server
-	if Options.dane || Options.noverify {
-		config.InsecureSkipVerify = true
-	} else {
-		config.InsecureSkipVerify = false
-	}
+	config.InsecureSkipVerify = true
 	config.VerifyPeerCertificate = func(rawCerts [][]byte,
 		verifiedChains [][]*x509.Certificate) error {
 		return verifyServer(rawCerts, verifiedChains, config)
