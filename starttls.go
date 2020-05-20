@@ -24,30 +24,25 @@ func getTCPconn(address net.IP, port int) (net.Conn, error) {
 //
 // TLShandshake -
 //
-func TLShandshake(conn net.Conn, config *tls.Config) error {
+func TLShandshake(conn net.Conn, config *tls.Config) (*tls.Conn, error) {
 
 	tlsconn := tls.Client(conn, config)
 	err := tlsconn.Handshake()
-	if err != nil {
-		return fmt.Errorf("TLS handshake failed: %s", err.Error())
-	}
-	printConnectionDetails(tlsconn.ConnectionState())
-	tlsconn.Close()
-	return err
+	return tlsconn, err
 }
 
 //
 // DoXMPP -
 // See RFC 6120, Section 5.4.2 for details
 //
-func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port int) error {
+func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port int) (*tls.Conn, error) {
 
 	var servicename, rolename, line string
 	buf := make([]byte, bufsize)
 
 	conn, err := getTCPconn(serverIP, port)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
@@ -65,6 +60,7 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 		rolename = "server"
 	}
 
+	// send initial stream header
 	outstring := fmt.Sprintf(
 		"<?xml version='1.0'?><stream:stream to='%s' "+
 			"version='1.0' xml:lang='en' xmlns='jabber:%s' "+
@@ -74,9 +70,10 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 	writer.WriteString(outstring)
 	writer.Flush()
 
+	// read response stream header; look for STARTTLS feature support
 	_, err = reader.Read(buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = string(buf)
 	fmt.Printf("recv: %s\n", line)
@@ -87,38 +84,39 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 		gotSTARTTLS = true
 	}
 	if !gotSTARTTLS {
-		return fmt.Errorf("XMPP STARTTLS unavailable")
+		return nil, fmt.Errorf("XMPP STARTTLS unavailable")
 	}
 
+	// issue STARTTLS command
 	outstring = "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
 	fmt.Printf("send: %s\n", outstring)
 	writer.WriteString(outstring + "\r\n")
 	writer.Flush()
 
+	// read response and look for proceed element
 	_, err = reader.Read(buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = string(buf)
 	fmt.Printf("recv: %s\n", line)
 	if !strings.Contains(line, "<proceed") {
-		return fmt.Errorf("XMPP STARTTLS command failed")
+		return nil, fmt.Errorf("XMPP STARTTLS command failed")
 	}
 
-	err = TLShandshake(conn, config)
-	return err
+	return TLShandshake(conn, config)
 }
 
 //
 // DoPOP3 -
 //
-func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port int) error {
+func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port int) (*tls.Conn, error) {
 
 	var line string
 
 	conn, err := getTCPconn(serverIP, port)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	reader := bufio.NewReader(conn)
@@ -127,7 +125,7 @@ func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port
 	// Read POP3 greeting
 	line, err = reader.ReadString('\n')
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
 	fmt.Printf("recv: %s\n", line)
@@ -138,32 +136,30 @@ func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port
 	writer.Flush()
 
 	// Read STLS response, look for +OK
-	// Read POP3 greeting
 	line, err = reader.ReadString('\n')
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
 	fmt.Printf("recv: %s\n", line)
 	if !strings.HasPrefix(line, "+OK") {
-		return fmt.Errorf("POP3 STARTTLS unavailable")
+		return nil, fmt.Errorf("POP3 STARTTLS unavailable")
 	}
 
-	err = TLShandshake(conn, config)
-	return err
+	return TLShandshake(conn, config)
 }
 
 //
 // DoIMAP -
 //
-func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port int) error {
+func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port int) (*tls.Conn, error) {
 
 	var gotSTARTTLS bool
 	var line string
 
 	conn, err := getTCPconn(serverIP, port)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	reader := bufio.NewReader(conn)
@@ -172,7 +168,7 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 	// Read IMAP greeting
 	line, err = reader.ReadString('\n')
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
 	fmt.Printf("recv: %s\n", line)
@@ -185,7 +181,7 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 	for {
 		line, err = reader.ReadString('\n')
 		if err != nil {
-			return err
+			return nil, err
 		}
 		line = strings.TrimRight(line, "\r\n")
 		fmt.Printf("recv: %s\n", line)
@@ -198,7 +194,7 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 	}
 
 	if !gotSTARTTLS {
-		return fmt.Errorf("IMAP STARTTLS capability unavailable")
+		return nil, fmt.Errorf("IMAP STARTTLS capability unavailable")
 	}
 
 	// Send STARTTLS
@@ -209,16 +205,15 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 	// Look for OK response
 	line, err = reader.ReadString('\n')
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
 	fmt.Printf("recv: %s\n", line)
 	if !strings.HasPrefix(line, ". OK") {
-		return fmt.Errorf("STARTTLS failed to negotiate")
+		return nil, fmt.Errorf("STARTTLS failed to negotiate")
 	}
 
-	err = TLShandshake(conn, config)
-	return err
+	return TLShandshake(conn, config)
 }
 
 //
@@ -242,7 +237,7 @@ func parseSMTPline(line string) (int, string, bool, error) {
 //
 // DoSMTP -
 //
-func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port int) error {
+func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port int) (*tls.Conn, error) {
 
 	var replycode int
 	var line, rest string
@@ -250,7 +245,7 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 
 	conn, err := getTCPconn(serverIP, port)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	reader := bufio.NewReader(conn)
@@ -260,20 +255,20 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 	for {
 		line, err = reader.ReadString('\n')
 		if err != nil {
-			return err
+			return nil, err
 		}
 		line = strings.TrimRight(line, "\r\n")
 		fmt.Printf("recv: %s\n", line)
 		replycode, _, responseDone, err = parseSMTPline(line)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if responseDone {
 			break
 		}
 	}
 	if replycode != 220 {
-		return fmt.Errorf("invalid reply code in SMTP greeting")
+		return nil, fmt.Errorf("invalid reply code in SMTP greeting")
 	}
 
 	// Send EHLO, read possibly multi-line response, look for STARTTLS
@@ -284,16 +279,16 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 	for {
 		line, err = reader.ReadString('\n')
 		if err != nil {
-			return err
+			return nil, err
 		}
 		line = strings.TrimRight(line, "\r\n")
 		fmt.Printf("recv: %s\n", line)
 		replycode, rest, responseDone, err = parseSMTPline(line)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if replycode != 250 {
-			return fmt.Errorf("invalid reply code in EHLO response")
+			return nil, fmt.Errorf("invalid reply code in EHLO response")
 		}
 		if strings.Contains(rest, "STARTTLS") {
 			gotSTARTTLS = true
@@ -304,7 +299,7 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 	}
 
 	if !gotSTARTTLS {
-		return fmt.Errorf("SMTP STARTTLS support not detected")
+		return nil, fmt.Errorf("SMTP STARTTLS support not detected")
 	}
 
 	// Send STARTTLS command and read success reply code
@@ -314,52 +309,38 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 
 	line, err = reader.ReadString('\n')
 	if err != nil {
-		return err
+		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
 	fmt.Printf("recv: %s\n", line)
 	replycode, _, _, err = parseSMTPline(line)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if replycode != 220 {
-		return fmt.Errorf("invalid reply code to STARTTLS command")
+		return nil, fmt.Errorf("invalid reply code to STARTTLS command")
 	}
 
-	// Execute TLS handshake
-	err = TLShandshake(conn, config)
-	return err
+	return TLShandshake(conn, config)
 }
 
 //
 // startTLS -
 //
-func startTLS(config *tls.Config, app string, server string, serverIP net.IP, port int) error {
-
-	var cs tls.ConnectionState
+func startTLS(config *tls.Config, app string, server string, serverIP net.IP, port int) (*tls.Conn, error) {
 
 	fmt.Printf("## STARTTLS application: %s\n", app)
 
 	switch app {
-
 	case "smtp":
-		err := DoSMTP(config, app, server, serverIP, port)
-		return err
-
+		return DoSMTP(config, app, server, serverIP, port)
 	case "imap":
-		err := DoIMAP(config, app, server, serverIP, port)
-		return err
-
+		return DoIMAP(config, app, server, serverIP, port)
 	case "pop3":
-		err := DoPOP3(config, app, server, serverIP, port)
-		return err
-
+		return DoPOP3(config, app, server, serverIP, port)
 	case "xmpp-client", "xmpp-server":
-		err := DoXMPP(config, app, server, serverIP, port)
-		return err
-
+		return DoXMPP(config, app, server, serverIP, port)
 	default:
-		_ = cs
-		return fmt.Errorf("Unknown STARTTLS application: %s", app)
+		return nil, fmt.Errorf("Unknown STARTTLS application: %s", app)
 	}
 }

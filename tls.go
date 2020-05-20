@@ -438,24 +438,27 @@ func getDialer(timeout int) *net.Dialer {
 func checkTLS(server string, serverIP net.IP, port int) error {
 
 	var err error
+	var conn *tls.Conn
+
 	config := getTLSconfig(server)
 
 	if Options.starttls != "" {
-		err = startTLS(config, Options.starttls, server, serverIP, port)
+		conn, err = startTLS(config, Options.starttls, server, serverIP, port)
 		if err != nil {
 			return fmt.Errorf("%s, %s: %s", server, serverIP, err.Error())
 		}
 	} else {
 		dialer := getDialer(defaultTCPTimeout)
-		conn, err := tls.DialWithDialer(dialer, "tcp",
+		conn, err = tls.DialWithDialer(dialer, "tcp",
 			addressString(serverIP, port), config)
 		if err != nil {
 			return fmt.Errorf("%s, %s: %s", server, serverIP, err.Error())
 		}
-		cs := conn.ConnectionState()
-		printConnectionDetails(cs)
-		conn.Close()
 	}
+
+	cs := conn.ConnectionState()
+	printConnectionDetails(cs)
+	conn.Close()
 
 	return err
 }

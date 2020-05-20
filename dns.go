@@ -138,21 +138,9 @@ func makeQuery(query Query, qopts QueryOptions) *dns.Msg {
 
 	m := new(dns.Msg)
 	m.Id = dns.Id()
-	if qopts.rdflag {
-		m.RecursionDesired = true
-	} else {
-		m.RecursionDesired = false
-	}
-	if qopts.adflag {
-		m.AuthenticatedData = true
-	} else {
-		m.AuthenticatedData = false
-	}
-	if qopts.cdflag {
-		m.CheckingDisabled = true
-	} else {
-		m.CheckingDisabled = false
-	}
+	m.RecursionDesired = qopts.rdflag
+	m.AuthenticatedData = qopts.adflag
+	m.CheckingDisabled = qopts.cdflag
 	m.SetEdns0(qopts.payload, true)
 	m.Question = make([]dns.Question, 1)
 	m.Question[0] = dns.Question{Name: query.qname, Qtype: query.qtype,
