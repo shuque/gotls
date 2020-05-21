@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 )
 
 //
@@ -183,7 +182,7 @@ func computeTLSA(tlsaRdata *TLSArdata, cert *x509.Certificate) (string, error) {
 // chainMatchesTLSA -
 // Check that TLSA record data has a corresponding match in the certificate chain.
 //
-func chainMatchesTLSA(chain []*x509.Certificate, tlsaRdata *TLSArdata) bool {
+func chainMatchesTLSA(chain []*x509.Certificate, name string, tlsaRdata *TLSArdata) bool {
 
 	var Authenticated = false
 	var hash string
@@ -235,18 +234,48 @@ func chainMatchesTLSA(chain []*x509.Certificate, tlsaRdata *TLSArdata) bool {
 }
 
 //
+// smtpUsageOK -
+//
+func smtpUsageOK(tr *TLSArdata) bool {
+
+	if Options.smtpAnyMode {
+		return true
+	}
+
+	if tr.usage == 2 || tr.usage == 3 {
+		return true
+	}
+
+	fmt.Printf("   WARN: %s: invalid usage mode for SMTP.\n", tr)
+	return false
+}
+
+//
 // daneAuthenticationSingleChain -
 // Perform DANE authentication of a single certificate chain. TLSA rdata is
 // obtained from the global "tlsa" struct.
 //
-func daneAuthenticationSingleChain(chain []*x509.Certificate) bool {
+func daneAuthenticationSingleChain(chain []*x509.Certificate, name string) bool {
 
 	var Authenticated, ok bool
+	var err error
 
 	for _, tlsaRdata := range tlsa.rdata {
-		ok = chainMatchesTLSA(chain, tlsaRdata)
+		if Options.starttls == "smtp" && !smtpUsageOK(tlsaRdata) {
+			continue
+		}
+		ok = chainMatchesTLSA(chain, name, tlsaRdata)
 		if ok {
-			Authenticated = true
+			if tlsaRdata.usage == 3 && !Options.daneEEname {
+				Authenticated = true
+				continue
+			}
+			err = chain[0].VerifyHostname(name)
+			if err == nil {
+				Authenticated = true
+			} else {
+				fmt.Printf("   WARN: %s name did not match certificate.\n", tlsaRdata)
+			}
 		}
 	}
 
@@ -260,12 +289,12 @@ func daneAuthenticationSingleChain(chain []*x509.Certificate) bool {
 // true, once a single chain authenticates. And return false if no chain
 // authenticates.
 //
-func daneAuthenticationAllChains(chains [][]*x509.Certificate) bool {
+func daneAuthenticationAllChains(chains [][]*x509.Certificate, name string) bool {
 
 	var ok bool
 
 	for _, chain := range chains {
-		ok = daneAuthenticationSingleChain(chain)
+		ok = daneAuthenticationSingleChain(chain, name)
 		if ok {
 			return true
 		}
@@ -299,22 +328,21 @@ func verifyChain(certs []*x509.Certificate, config *tls.Config,
 
 	var verifiedChains [][]*x509.Certificate
 	var err error
+	var opts x509.VerifyOptions
 
 	if root {
-		opts := x509.VerifyOptions{
-			Roots:         config.RootCAs,
-			DNSName:       config.ServerName,
-			Intermediates: x509.NewCertPool(),
-		}
+		opts.Roots = config.RootCAs
+		//opts.DNSName = config.ServerName
+		opts.Intermediates = x509.NewCertPool()
+
 		for _, cert := range certs[1:] {
 			opts.Intermediates.AddCert(cert)
 		}
 		verifiedChains, err = certs[0].Verify(opts)
 	} else {
-		opts := x509.VerifyOptions{
-			Roots:   x509.NewCertPool(),
-			DNSName: config.ServerName,
-		}
+		opts.Roots = x509.NewCertPool()
+		//opts.DNSName = config.ServerName
+
 		chainlength := len(certs)
 		last := certs[chainlength-1]
 		opts.Roots.AddCert(last)
@@ -350,7 +378,7 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 	}
 
 	if Options.noverify {
-		return nil
+		return err
 	}
 
 	verifiedChains, err = verifyChain(certs, config, true)
@@ -360,22 +388,21 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 	}
 
 	if !(Options.dane && tlsa != nil) {
-		return err
+		if !okpkix {
+			return err
+		}
+		return certs[0].VerifyHostname(config.ServerName)
 	}
 
 	fmt.Printf("## DANE TLS authentication result:\n")
-	if !okpkix && len(certs) > 0 {
+	if !okpkix {
 		verifiedChains, err = verifyChain(certs, config, false)
 		if err != nil {
 			return fmt.Errorf("DANE TLS error: cert chain: %s", err.Error())
 		}
 	}
 
-	if verifiedChains != nil {
-		okdane = daneAuthenticationAllChains(verifiedChains)
-	} else {
-		okdane = daneAuthenticationSingleChain(certs)
-	}
+	okdane = daneAuthenticationAllChains(verifiedChains, config.ServerName)
 	if !okdane {
 		return fmt.Errorf("DANE TLS authentication failed")
 	}
@@ -420,16 +447,6 @@ func getTLSconfig(server string) *tls.Config {
 		return verifyServer(rawCerts, verifiedChains, config)
 	}
 	return config
-}
-
-//
-// getDialer -
-//
-func getDialer(timeout int) *net.Dialer {
-
-	dialer := new(net.Dialer)
-	dialer.Timeout = time.Second * time.Duration(timeout)
-	return dialer
 }
 
 //

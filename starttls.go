@@ -12,16 +12,6 @@ import (
 const bufsize = 2048
 
 //
-// getTCPconn() -
-//
-func getTCPconn(address net.IP, port int) (net.Conn, error) {
-
-	dialer := getDialer(defaultTCPTimeout)
-	conn, err := dialer.Dial("tcp", addressString(address, port))
-	return conn, err
-}
-
-//
 // TLShandshake -
 //
 func TLShandshake(conn net.Conn, config *tls.Config) (*tls.Conn, error) {
