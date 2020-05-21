@@ -23,9 +23,10 @@ var Progname string = path.Base(os.Args[0])
 
 // Defaults
 var (
-	defaultDNSTimeout = 3
-	defaultDNSRetries = 3
-	defaultTCPTimeout = 4
+	defaultDNSTimeout   = 3
+	defaultDNSRetries   = 3
+	defaultTCPTimeout   = 4
+	defaultResolverPort = 53
 )
 
 // Globals
@@ -49,7 +50,7 @@ func main() {
 	server, port = parseArgs(os.Args)
 
 	if Options.dane {
-		tlsa, err = getTLSA(Options.resolver, server, port)
+		tlsa, err = getTLSA(Options.resolver, Options.rport, server, port)
 		if err != nil {
 			fmt.Printf("%s. Use \"-m pkix\" for PKIX only.\n", err)
 			fmt.Printf("\n[2] Authentication failed.\n")
@@ -68,7 +69,7 @@ func main() {
 		}
 	}
 
-	ipList, err := getAddresses(Options.resolver, server)
+	ipList, err := getAddresses(Options.resolver, Options.rport, server)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(2)

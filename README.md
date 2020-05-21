@@ -44,6 +44,7 @@ Usage: gotls [Options] <host> [<port>]
        -4               Use IPv4 transport only
        -6               Use IPv6 transport only
        -r ip            DNS Resolver IP address
+       -rp port         DNS Resolver port (default 53)
        -t N             Query timeout value in seconds (default 3)
        -dane-ee-name    Do hostname check even for DANE-EE mode
        -smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode

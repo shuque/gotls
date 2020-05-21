@@ -151,12 +151,12 @@ func makeQuery(query Query, qopts QueryOptions) *dns.Msg {
 //
 // SendQueryUDP - send DNS query via UDP
 //
-func sendQueryUDP(query Query, resolver net.IP, qopts QueryOptions) (*dns.Msg, error) {
+func sendQueryUDP(query Query, resolver net.IP, port int, qopts QueryOptions) (*dns.Msg, error) {
 
 	var response *dns.Msg
 	var err error
 
-	destination := addressString(resolver, 53)
+	destination := addressString(resolver, port)
 
 	m := makeQuery(query, qopts)
 
@@ -182,12 +182,12 @@ func sendQueryUDP(query Query, resolver net.IP, qopts QueryOptions) (*dns.Msg, e
 //
 // SendQueryTCP - send DNS query via TCP
 //
-func sendQueryTCP(query Query, resolver net.IP, qopts QueryOptions) (*dns.Msg, error) {
+func sendQueryTCP(query Query, resolver net.IP, port int, qopts QueryOptions) (*dns.Msg, error) {
 
 	var response *dns.Msg
 	var err error
 
-	destination := addressString(resolver, 53)
+	destination := addressString(resolver, port)
 	m := makeQuery(query, qopts)
 
 	c := new(dns.Client)
@@ -202,15 +202,15 @@ func sendQueryTCP(query Query, resolver net.IP, qopts QueryOptions) (*dns.Msg, e
 //
 // SendQuery - send DNS query via UDP with fallback to TCP upon truncation
 //
-func sendQuery(query Query, resolver net.IP, qopts QueryOptions) (*dns.Msg, error) {
+func sendQuery(query Query, resolver net.IP, port int, qopts QueryOptions) (*dns.Msg, error) {
 
 	var response *dns.Msg
 	var err error
 
-	response, err = sendQueryUDP(query, resolver, qopts)
+	response, err = sendQueryUDP(query, resolver, port, qopts)
 
 	if err == nil && response.MsgHdr.Truncated {
-		response, err = sendQueryTCP(query, resolver, qopts)
+		response, err = sendQueryTCP(query, resolver, port, qopts)
 	}
 
 	if err != nil {
@@ -239,7 +239,7 @@ func responseOK(response *dns.Msg) bool {
 // getAddresses -
 // Obtain list of IPv4 and IPv6 addresses for given hostname
 //
-func getAddresses(resolver net.IP, hostname string) ([]net.IP, error) {
+func getAddresses(resolver net.IP, rport int, hostname string) ([]net.IP, error) {
 
 	var ipList []net.IP
 	var q Query
@@ -254,7 +254,7 @@ func getAddresses(resolver net.IP, hostname string) ([]net.IP, error) {
 
 	for _, rrtype := range rrTypes {
 		q = getQuery(hostname, rrtype, dns.ClassINET)
-		response, err := sendQuery(q, resolver, qopts)
+		response, err := sendQuery(q, resolver, rport, qopts)
 		if err != nil {
 			break
 		}
@@ -285,7 +285,7 @@ func getAddresses(resolver net.IP, hostname string) ([]net.IP, error) {
 //
 // getTLSA()
 //
-func getTLSA(resolver net.IP, hostname string, port int) (*TLSAinfo, error) {
+func getTLSA(resolver net.IP, rport int, hostname string, port int) (*TLSAinfo, error) {
 
 	var q Query
 	var tr *TLSArdata
@@ -293,7 +293,7 @@ func getTLSA(resolver net.IP, hostname string, port int) (*TLSAinfo, error) {
 	qname := fmt.Sprintf("_%d._tcp.%s", port, hostname)
 
 	q = getQuery(qname, dns.TypeTLSA, dns.ClassINET)
-	response, err := sendQuery(q, resolver, qopts)
+	response, err := sendQuery(q, resolver, rport, qopts)
 
 	if err != nil {
 		return nil, err

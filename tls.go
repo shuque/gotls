@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/tls"
@@ -92,6 +95,23 @@ func EKU2Strings(ekulist []x509.ExtKeyUsage) string {
 }
 
 //
+// KeySizeInBits -
+//
+func KeySizeInBits(publickey interface{}) int {
+
+	switch v := publickey.(type) {
+	case *rsa.PublicKey:
+		return v.Size() * 8
+	case *ecdsa.PublicKey:
+		return v.X.BitLen() + v.Y.BitLen()
+	case *ed25519.PublicKey:
+		return 256
+	default:
+		return 0
+	}
+}
+
+//
 // printCertDetails --
 // Print some details of the certificate.
 //
@@ -114,7 +134,8 @@ func printCertDetails(cert *x509.Certificate) {
 		fmt.Printf("   SAN URI: %v\n", uri)
 	}
 	fmt.Printf("   Signature Algorithm: %v\n", cert.SignatureAlgorithm)
-	fmt.Printf("   PublicKey Algorithm: %v\n", cert.PublicKeyAlgorithm)
+	fmt.Printf("   PublicKey Algorithm: %v %d-Bits\n",
+		cert.PublicKeyAlgorithm, KeySizeInBits(cert.PublicKey))
 	fmt.Printf("   Inception:  %v\n", cert.NotBefore)
 	fmt.Printf("   Expiration: %v\n", cert.NotAfter)
 	fmt.Printf("   KU: %v\n", KU2Strings(cert.KeyUsage))
@@ -332,7 +353,6 @@ func verifyChain(certs []*x509.Certificate, config *tls.Config,
 
 	if root {
 		opts.Roots = config.RootCAs
-		//opts.DNSName = config.ServerName
 		opts.Intermediates = x509.NewCertPool()
 
 		for _, cert := range certs[1:] {
@@ -341,7 +361,6 @@ func verifyChain(certs []*x509.Certificate, config *tls.Config,
 		verifiedChains, err = certs[0].Verify(opts)
 	} else {
 		opts.Roots = x509.NewCertPool()
-		//opts.DNSName = config.ServerName
 
 		chainlength := len(certs)
 		last := certs[chainlength-1]
@@ -462,14 +481,14 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 	if Options.starttls != "" {
 		conn, err = startTLS(config, Options.starttls, server, serverIP, port)
 		if err != nil {
-			return fmt.Errorf("%s, %s: %s", server, serverIP, err.Error())
+			return fmt.Errorf("FAIL: %s, %s: %s", server, serverIP, err.Error())
 		}
 	} else {
 		dialer := getDialer(defaultTCPTimeout)
 		conn, err = tls.DialWithDialer(dialer, "tcp",
 			addressString(serverIP, port), config)
 		if err != nil {
-			return fmt.Errorf("%s, %s: %s", server, serverIP, err.Error())
+			return fmt.Errorf("FAIL: %s, %s: %s", server, serverIP, err.Error())
 		}
 	}
 

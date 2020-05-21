@@ -28,6 +28,7 @@ type OptionsStruct struct {
 	timeout     time.Duration
 	retries     int
 	resolver    net.IP
+	rport       int
 	printchain  bool
 }
 
@@ -49,6 +50,7 @@ func parseArgs(args []string) (server string, port int) {
 	flag.StringVar(&Options.starttls, "s", "", "STARTTLS app (smtp,imap,pop3)")
 	flag.StringVar(&Options.sname, "n", "", "Service name")
 	tmpString := flag.String("r", "", "Resolver IP address")
+	flag.IntVar(&Options.rport, "rp", defaultResolverPort, "Resolver port number")
 	tmpInt := flag.Int("t", defaultDNSTimeout, "query timeout in seconds")
 	flag.BoolVar(&Options.daneEEname, "dane-ee-name", false, "DANE EE name")
 	flag.BoolVar(&Options.smtpAnyMode, "smtp-any-mode", false, "SMTP any mode")
@@ -70,12 +72,13 @@ Usage: %s [Options] <host> [<port>]
 	-4               Use IPv4 transport only
 	-6               Use IPv6 transport only
 	-r ip            DNS Resolver IP address
+	-rp port         DNS Resolver port (default %d)
 	-t N             Query timeout value in seconds (default %d)
 	-dane-ee-name    Do hostname check even for DANE-EE mode
 	-smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
 	-noverify        Don't perform server certificate verification
 	-printchain      Print details of full certificate chain
-`, Progname, Version, Progname, defaultDNSTimeout)
+`, Progname, Version, Progname, defaultResolverPort, defaultDNSTimeout)
 	}
 
 	flag.Parse()
