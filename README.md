@@ -84,6 +84,7 @@ The program exits with the following codes:
 Check the HTTPS (port 443) TLS service at www.huque.com.
 
 ```
+$ gotls www.huque.com
 
 ## Checking www.huque.com. 2600:3c03:e000:81::a port 443
 ## Authentication: DANE OK
