@@ -12,16 +12,31 @@ the TLS connection and the certificate.
 
 DANE authentication requires the use of a validating DNS resolver,
 that sets the AD bit on authenticated responses. By default, this
-program uses the first resolver listed in /etc/resolv.conf. If
-the resolver doesn't validate, the program will fallback to normal
-PKIX authentication (unless the "-m dane" switch is provided which
-forces DANE). The "-r" option can be used to specify an alternative
-DNS resolver IP address.
+program uses the first resolver listed in /etc/resolv.conf, but
+an alternate resolver address and port can be specified with the
+-r and -rp command line options. If no secure DANE TLSA records
+are found, or if the resolver doesn't validate, the program will
+fallback to normal PKIX authentication. The "-m dane" switch can
+be used to prevent this fallback and force DANE authentication.
+
+STARTLS is supported for SMTP, POP3, IMAP, and XMPP via the
+"-s appname" option. If the STARTTLS application service expects
+a service name different than the server hostname, this can be
+specified with the "-n name" option. Per current spec, this
+program does not perform certificate hostname checks for DANE-EE
+mode TLSA records, but this can overridden with the "-dane-ee-name"
+option. For SMTP STARTTLS the program ignores PKIX-* mode TLSA
+records, unless the "-smtp-any-mode" option is specified.
+
+There are several other command line options, which are listed in
+the Usage section below.
+
 
 ### Limitations
 
 gotls does not do certificate revocation checks (CRL, OCSP, or
-stapled OCSP response). A future version might.
+stapled OCSP responses). A future version might support checking
+stapled OCSP responses.
 
 
 ### Building
@@ -34,22 +49,23 @@ Just run 'go build'. This will generate the executable 'gotls'.
 gotls, version 0.1.0
 Usage: gotls [Options] <host> [<port>]
 
-       If unspecified, the default port 443 is used.
+        If unspecified, the default port 443 is used.
 
-       Options:
-       -h               Print this help string
-       -m mode          Mode: "dane" or "pkix"
-       -s starttls      STARTTLS application (smtp, imap, pop3)
-       -n name          Service name (if different from hostname)
-       -4               Use IPv4 transport only
-       -6               Use IPv6 transport only
-       -r ip            DNS Resolver IP address
-       -rp port         DNS Resolver port (default 53)
-       -t N             Query timeout value in seconds (default 3)
-       -dane-ee-name    Do hostname check even for DANE-EE mode
-       -smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
-       -noverify        Don't perform server certificate verification
-       -printchain      Print details of full certificate chain
+        Options:
+        -h               Print this help string
+        -d               Debug mode - print additional info
+        -m mode          Mode: "dane" or "pkix"
+        -s starttls      STARTTLS application (smtp, imap, pop3)
+        -n name          Service name (if different from hostname)
+        -4               Use IPv4 transport only
+        -6               Use IPv6 transport only
+        -r ip            DNS Resolver IP address
+        -rp port         DNS Resolver port (default 53)
+        -t N             Query timeout value in seconds (default 3)
+        -dane-ee-name    Do hostname check even for DANE-EE mode
+        -smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
+        -noverify        Don't perform server certificate verification
+        -printchain      Print details of full certificate chain
 ```
 
 ### Exit codes:
@@ -65,10 +81,56 @@ The program exits with the following codes:
 
 ### Example runs:
 
-Check the HTTPS (port 443) TLS service at www.huque.com:
+Check the HTTPS (port 443) TLS service at www.huque.com.
 
 ```
-$ gotls www.huque.com
+
+## Checking www.huque.com. 2600:3c03:e000:81::a port 443
+## Authentication: DANE OK
+
+## Checking www.huque.com. 50.116.63.23 port 443
+## Authentication: DANE OK
+
+[0] Authentication succeeded for all (2) peers.
+```
+
+Check the HTTPS service at amazon.com. Here, no DANE TLSA records
+are found (in fact the zone is unsigned, so we get an unauthenticated
+response for the TLSA query, thus negating the possibility of DANE).
+So, the program prints a warning and falls back to traditional PKIX
+authentication:
+
+```
+$ gotls www.amazon.com
+WARNING: Unauthenticated TLSA response.
+No DANE TLSA records found. Falling back to PKIX-only.
+
+## Checking www.amazon.com. 13.226.35.231 port 443
+## Authentication: PKIX OK
+
+[0] Authentication succeeded for all (1) peers.
+```
+
+Forcing DANE authentication for the previous service with the
+"-m dane" switch produces an authentication failure result:
+
+```
+$ gotls -m dane www.amazon.com
+ERROR: TLSA response was unauthenticated. Use "-m pkix" for PKIX only.
+
+[2] Authentication failed.
+```
+
+Using the -d (debug) switch displays a great deal of additional
+diagnostic information, including the actual DANE TLSA records,
+offered and verified certificate chains, DANE record processing
+results, and verbose details of the server certificate. (Verbose
+details of the entire certificate chain can be obtained via the
+-printchain option):
+
+
+```
+$ gotls -d www.huque.com
 
 DNS TLSA RRset:
   qname: _443._tcp.www.huque.com.
@@ -88,20 +150,21 @@ DNS TLSA RRset:
      CN=DST Root CA X3,O=Digital Signature Trust Co.
    2 CN=DST Root CA X3,O=Digital Signature Trust Co.
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## DANE TLS authentication result:
+## DANE TLSA processing:
    WARN: DANE TLSA 3 1 1 [55f6db74..] did not match certificate.
    OK:   DANE TLSA 3 1 1 [736a6032..] matched EE certificate.
+## Authentication: DANE OK
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-## Certificate Info:
+## End-Entity Certificate Info:
    X509 version: 3
    Serial#: 3e041f5c8966fedc98553ae09e071b1c615
    Subject: CN=www.huque.com
    Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
    SAN dNSName: www.huque.com
    Signature Algorithm: SHA256-RSA
-   PublicKey Algorithm: RSA
+   PublicKey Algorithm: RSA 2048-Bits
    Inception:  2020-05-03 10:17:09 +0000 UTC
    Expiration: 2020-08-01 10:17:09 +0000 UTC
    KU: DigitalSignature KeyEncipherment
@@ -127,20 +190,21 @@ DNS TLSA RRset:
      CN=DST Root CA X3,O=Digital Signature Trust Co.
    2 CN=DST Root CA X3,O=Digital Signature Trust Co.
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## DANE TLS authentication result:
+## DANE TLSA processing:
    WARN: DANE TLSA 3 1 1 [55f6db74..] did not match certificate.
    OK:   DANE TLSA 3 1 1 [736a6032..] matched EE certificate.
+## Authentication: DANE OK
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-## Certificate Info:
+## End-Entity Certificate Info:
    X509 version: 3
    Serial#: 3e041f5c8966fedc98553ae09e071b1c615
    Subject: CN=www.huque.com
    Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
    SAN dNSName: www.huque.com
    Signature Algorithm: SHA256-RSA
-   PublicKey Algorithm: RSA
+   PublicKey Algorithm: RSA 2048-Bits
    Inception:  2020-05-03 10:17:09 +0000 UTC
    Expiration: 2020-08-01 10:17:09 +0000 UTC
    KU: DigitalSignature KeyEncipherment
@@ -156,10 +220,15 @@ DNS TLSA RRset:
 [0] Authentication succeeded for all (2) peers.
 ```
 
-Check only the IPv6 SMTP STARTTLS service at mta.openssl.org:
+The program understands a number of application services that use
+STARTTLS negotiation: SMTP, POP3, IMAP, XMPP-CLIENT and XMPP-SERVER.
+Using the "-s appname" option will use this mode.
+
+Below, we check only the IPv6 (-6) SMTP STARTTLS (-s smtp) service at
+mta.openssl.org port 25:
 
 ```
-$ gotls -6 -s smtp mta.openssl.org 25
+$ gotls -d -6 -s smtp mta.openssl.org 25
 
 DNS TLSA RRset:
   qname: _25._tcp.mta.openssl.org.
@@ -167,6 +236,7 @@ DNS TLSA RRset:
 
 ## Checking mta.openssl.org. 2001:608:c00:180::1:e6 port 25
 ## STARTTLS application: smtp
+recv: 220-mta.openssl.org ESMTP Postfix
 recv: 220 mta.openssl.org ESMTP Postfix
 send: EHLO localhost
 recv: 250-mta.openssl.org
@@ -192,19 +262,20 @@ recv: 220 2.0.0 Ready to start TLS
      CN=DST Root CA X3,O=Digital Signature Trust Co.
    2 CN=DST Root CA X3,O=Digital Signature Trust Co.
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## DANE TLS authentication result:
+## DANE TLSA processing:
    OK:   DANE TLSA 3 1 1 [6cf12d78..] matched EE certificate.
+## Authentication: DANE OK
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-## Certificate Info:
+## End-Entity Certificate Info:
    X509 version: 3
    Serial#: 3052db8c7f9b73c1a94b78535ab43bcacef
    Subject: CN=mta.openssl.org
    Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
    SAN dNSName: mta.openssl.org
    Signature Algorithm: SHA256-RSA
-   PublicKey Algorithm: RSA
+   PublicKey Algorithm: RSA 4096-Bits
    Inception:  2020-04-22 23:00:11 +0000 UTC
    Expiration: 2020-07-21 23:00:11 +0000 UTC
    KU: DigitalSignature KeyEncipherment

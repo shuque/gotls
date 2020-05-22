@@ -57,7 +57,9 @@ func main() {
 			os.Exit(2)
 		}
 		if tlsa != nil {
-			tlsa.Print()
+			if debug {
+				tlsa.Print()
+			}
 		} else {
 			if Options.pkix {
 				fmt.Printf("No DANE TLSA records found. Falling back to PKIX-only.\n")

@@ -44,6 +44,7 @@ func parseArgs(args []string) (server string, port int) {
 	var mode string
 
 	help := flag.Bool("h", false, "Print this help string")
+	flag.BoolVar(&debug, "d", false, "Debug mode")
 	flag.BoolVar(&Options.useV6, "6", false, "use IPv6 only")
 	flag.BoolVar(&Options.useV4, "4", false, "use IPv4 only")
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
@@ -66,6 +67,7 @@ Usage: %s [Options] <host> [<port>]
 
 	Options:
 	-h               Print this help string
+	-d               Debug mode - print additional info
 	-m mode          Mode: "dane" or "pkix"
 	-s starttls      STARTTLS application (smtp, imap, pop3)
 	-n name          Service name (if different from hostname)

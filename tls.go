@@ -217,12 +217,14 @@ func chainMatchesTLSA(chain []*x509.Certificate, name string, tlsaRdata *TLSArda
 			break
 		}
 		if hash == tlsaRdata.data {
-			fmt.Printf("   OK:   %s matched EE certificate.\n", tlsaRdata)
+			if debug {
+				fmt.Printf("   OK:   %s matched EE certificate.\n", tlsaRdata)
+			}
 			if tlsaRdata.usage == 3 {
 				Authenticated = true
 			} else if okpkix {
 				Authenticated = true
-			} else {
+			} else if debug {
 				fmt.Printf("   WARN:   but PKIX auth fails.\n")
 			}
 		}
@@ -234,12 +236,14 @@ func chainMatchesTLSA(chain []*x509.Certificate, name string, tlsaRdata *TLSArda
 				break
 			}
 			if hash == tlsaRdata.data {
-				fmt.Printf("   OK:   %s matched certificate at depth %d.\n", tlsaRdata, i+1)
+				if debug {
+					fmt.Printf("   OK:   %s matched certificate at depth %d.\n", tlsaRdata, i+1)
+				}
 				if tlsaRdata.usage == 2 {
 					Authenticated = true
 				} else if okpkix {
 					Authenticated = true
-				} else {
+				} else if debug {
 					fmt.Printf("   WARN:   but PKIX auth fails.\n")
 				}
 			}
@@ -249,7 +253,9 @@ func chainMatchesTLSA(chain []*x509.Certificate, name string, tlsaRdata *TLSArda
 	}
 
 	if !Authenticated {
-		fmt.Printf("   WARN: %s did not match certificate.\n", tlsaRdata)
+		if debug {
+			fmt.Printf("   WARN: %s did not match certificate.\n", tlsaRdata)
+		}
 	}
 	return Authenticated
 }
@@ -267,7 +273,9 @@ func smtpUsageOK(tr *TLSArdata) bool {
 		return true
 	}
 
-	fmt.Printf("   WARN: %s: invalid usage mode for SMTP.\n", tr)
+	if debug {
+		fmt.Printf("   WARN: %s: invalid usage mode for SMTP.\n", tr)
+	}
 	return false
 }
 
@@ -295,7 +303,9 @@ func daneAuthenticationSingleChain(chain []*x509.Certificate, name string) bool 
 			if err == nil {
 				Authenticated = true
 			} else {
-				fmt.Printf("   WARN: %s name did not match certificate.\n", tlsaRdata)
+				if debug {
+					fmt.Printf("   WARN: %s name did not match certificate.\n", tlsaRdata)
+				}
 			}
 		}
 	}
@@ -385,15 +395,19 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 	var err error
 	certs := make([]*x509.Certificate, len(rawCerts))
 
-	fmt.Printf("## Peer Certificate Chain:\n")
+	if debug {
+		fmt.Printf("## Peer Certificate Chain:\n")
+	}
 	for i, asn1Data := range rawCerts {
 		cert, err := x509.ParseCertificate(asn1Data)
 		if err != nil {
 			return errors.New("failed to parse server certificate: " + err.Error())
 		}
 		certs[i] = cert
-		fmt.Printf("  %2d %v\n", i, cert.Subject)
-		fmt.Printf("     %v\n", cert.Issuer)
+		if debug {
+			fmt.Printf("  %2d %v\n", i, cert.Subject)
+			fmt.Printf("     %v\n", cert.Issuer)
+		}
 	}
 
 	if Options.noverify {
@@ -403,7 +417,9 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 	verifiedChains, err = verifyChain(certs, config, true)
 	if err == nil {
 		okpkix = true
-		printPKIXVerifiedChains(verifiedChains)
+		if debug {
+			printPKIXVerifiedChains(verifiedChains)
+		}
 	}
 
 	if !(Options.dane && tlsa != nil) {
@@ -413,7 +429,9 @@ func verifyServer(rawCerts [][]byte, verifiedChains [][]*x509.Certificate,
 		return certs[0].VerifyHostname(config.ServerName)
 	}
 
-	fmt.Printf("## DANE TLS authentication result:\n")
+	if debug {
+		fmt.Printf("## DANE TLSA processing:\n")
+	}
 	if !okpkix {
 		verifiedChains, err = verifyChain(certs, config, false)
 		if err != nil {
@@ -446,7 +464,7 @@ func printConnectionDetails(cs tls.ConnectionState) {
 	peerCerts = cs.PeerCertificates
 	if Options.printchain {
 		printCertChainDetails(peerCerts)
-	} else {
+	} else if debug {
 		fmt.Printf("## End-Entity Certificate Info:\n")
 		printCertDetails(peerCerts[0])
 	}
@@ -492,8 +510,16 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 		}
 	}
 
-	cs := conn.ConnectionState()
-	printConnectionDetails(cs)
+	if okdane {
+		fmt.Printf("## Authentication: DANE OK\n")
+	} else if okpkix {
+		fmt.Printf("## Authentication: PKIX OK\n")
+	}
+
+	if debug {
+		cs := conn.ConnectionState()
+		printConnectionDetails(cs)
+	}
 	conn.Close()
 
 	return err

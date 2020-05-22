@@ -56,7 +56,9 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 			"version='1.0' xml:lang='en' xmlns='jabber:%s' "+
 			"xmlns:stream='http://etherx.jabber.org/streams'>",
 		servicename, rolename)
-	fmt.Printf("send: %s\n", outstring)
+	if debug {
+		fmt.Printf("send: %s\n", outstring)
+	}
 	writer.WriteString(outstring)
 	writer.Flush()
 
@@ -66,7 +68,9 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = string(buf)
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 
 	gotSTARTTLS := false
 	if strings.Contains(line, "<starttls") && strings.Contains(line,
@@ -79,7 +83,9 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 
 	// issue STARTTLS command
 	outstring = "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
-	fmt.Printf("send: %s\n", outstring)
+	if debug {
+		fmt.Printf("send: %s\n", outstring)
+	}
 	writer.WriteString(outstring + "\r\n")
 	writer.Flush()
 
@@ -89,7 +95,9 @@ func DoXMPP(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = string(buf)
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 	if !strings.Contains(line, "<proceed") {
 		return nil, fmt.Errorf("XMPP STARTTLS command failed")
 	}
@@ -118,10 +126,14 @@ func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 
 	// Send STLS command
-	fmt.Printf("send: STLS\n")
+	if debug {
+		fmt.Printf("send: STLS\n")
+	}
 	writer.WriteString("STLS\r\n")
 	writer.Flush()
 
@@ -131,7 +143,9 @@ func DoPOP3(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 	if !strings.HasPrefix(line, "+OK") {
 		return nil, fmt.Errorf("POP3 STARTTLS unavailable")
 	}
@@ -161,10 +175,14 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 
 	// Send Capability command, read response, looking for STARTTLS
-	fmt.Printf("send: . CAPABILITY\n")
+	if debug {
+		fmt.Printf("send: . CAPABILITY\n")
+	}
 	writer.WriteString(". CAPABILITY\r\n")
 	writer.Flush()
 
@@ -174,7 +192,9 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 			return nil, err
 		}
 		line = strings.TrimRight(line, "\r\n")
-		fmt.Printf("recv: %s\n", line)
+		if debug {
+			fmt.Printf("recv: %s\n", line)
+		}
 		if strings.HasPrefix(line, "* CAPABILITY") && strings.Contains(line, "STARTTLS") {
 			gotSTARTTLS = true
 		}
@@ -188,7 +208,9 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 	}
 
 	// Send STARTTLS
-	fmt.Printf("send: . STARTTLS\n")
+	if debug {
+		fmt.Printf("send: . STARTTLS\n")
+	}
 	writer.WriteString(". STARTTLS\r\n")
 	writer.Flush()
 
@@ -198,7 +220,9 @@ func DoIMAP(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 	if !strings.HasPrefix(line, ". OK") {
 		return nil, fmt.Errorf("STARTTLS failed to negotiate")
 	}
@@ -248,7 +272,9 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 			return nil, err
 		}
 		line = strings.TrimRight(line, "\r\n")
-		fmt.Printf("recv: %s\n", line)
+		if debug {
+			fmt.Printf("recv: %s\n", line)
+		}
 		replycode, _, responseDone, err = parseSMTPline(line)
 		if err != nil {
 			return nil, err
@@ -262,7 +288,9 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 	}
 
 	// Send EHLO, read possibly multi-line response, look for STARTTLS
-	fmt.Printf("send: EHLO localhost\n")
+	if debug {
+		fmt.Printf("send: EHLO localhost\n")
+	}
 	writer.WriteString("EHLO localhost\r\n")
 	writer.Flush()
 
@@ -272,7 +300,9 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 			return nil, err
 		}
 		line = strings.TrimRight(line, "\r\n")
-		fmt.Printf("recv: %s\n", line)
+		if debug {
+			fmt.Printf("recv: %s\n", line)
+		}
 		replycode, rest, responseDone, err = parseSMTPline(line)
 		if err != nil {
 			return nil, err
@@ -293,7 +323,9 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 	}
 
 	// Send STARTTLS command and read success reply code
-	fmt.Printf("send: STARTTLS\n")
+	if debug {
+		fmt.Printf("send: STARTTLS\n")
+	}
 	writer.WriteString("STARTTLS\r\n")
 	writer.Flush()
 
@@ -302,7 +334,9 @@ func DoSMTP(config *tls.Config, app string, server string, serverIP net.IP, port
 		return nil, err
 	}
 	line = strings.TrimRight(line, "\r\n")
-	fmt.Printf("recv: %s\n", line)
+	if debug {
+		fmt.Printf("recv: %s\n", line)
+	}
 	replycode, _, _, err = parseSMTPline(line)
 	if err != nil {
 		return nil, err
