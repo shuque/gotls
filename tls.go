@@ -510,17 +510,17 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 		}
 	}
 
-	if okdane {
-		fmt.Printf("## Authentication: DANE OK\n")
-	} else if okpkix {
-		fmt.Printf("## Authentication: PKIX OK\n")
-	}
-
 	if debug {
 		cs := conn.ConnectionState()
 		printConnectionDetails(cs)
 	}
 	conn.Close()
+
+	if okdane {
+		fmt.Printf("## Authentication: DANE OK\n")
+	} else if okpkix {
+		fmt.Printf("## Authentication: PKIX OK\n")
+	}
 
 	return err
 }
