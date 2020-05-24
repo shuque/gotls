@@ -1,8 +1,9 @@
 # gotls
 
-gotls connects to a TLS server, performs DANE/PKIX authentication of
-the server certificate chain, and then prints out information about
-the TLS connection and the certificate.
+gotls is a TLS server diagnostic tool that understands DANE and PKIX
+authentication. It connects to a TLS server, performs DANE and/or PKIX
+authentication of the server certificate chain, and then optionally
+prints out information about the TLS connection and the certificate.
 
 
 ### Pre-requisites
@@ -154,7 +155,6 @@ DNS TLSA RRset:
 ## DANE TLSA processing:
    WARN: DANE TLSA 3 1 1 [55f6db74..] did not match certificate.
    OK:   DANE TLSA 3 1 1 [736a6032..] matched EE certificate.
-## Authentication: DANE OK
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -177,6 +177,7 @@ DNS TLSA RRset:
    CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
+## Authentication: DANE OK
 
 ## Checking www.huque.com. 50.116.63.23 port 443
 ## Peer Certificate Chain:
@@ -194,7 +195,6 @@ DNS TLSA RRset:
 ## DANE TLSA processing:
    WARN: DANE TLSA 3 1 1 [55f6db74..] did not match certificate.
    OK:   DANE TLSA 3 1 1 [736a6032..] matched EE certificate.
-## Authentication: DANE OK
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -217,6 +217,7 @@ DNS TLSA RRset:
    CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
+## Authentication: DANE OK
 
 [0] Authentication succeeded for all (2) peers.
 ```
@@ -265,7 +266,6 @@ recv: 220 2.0.0 Ready to start TLS
      CN=DST Root CA X3,O=Digital Signature Trust Co.
 ## DANE TLSA processing:
    OK:   DANE TLSA 3 1 1 [6cf12d78..] matched EE certificate.
-## Authentication: DANE OK
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
@@ -288,6 +288,7 @@ recv: 220 2.0.0 Ready to start TLS
    CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
+## Authentication: DANE OK
 
 [0] Authentication succeeded for all (1) peers.
 ```

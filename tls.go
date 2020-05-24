@@ -495,6 +495,8 @@ func checkTLS(server string, serverIP net.IP, port int) error {
 	var conn *tls.Conn
 
 	config := getTLSconfig(server)
+	okdane = false
+	okpkix = false
 
 	if Options.starttls != "" {
 		conn, err = startTLS(config, Options.starttls, server, serverIP, port)

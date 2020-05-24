@@ -52,7 +52,7 @@ func main() {
 	if Options.dane {
 		tlsa, err = getTLSA(Options.resolver, Options.rport, server, port)
 		if err != nil {
-			fmt.Printf("%s. Use \"-m pkix\" for PKIX only.\n", err)
+			fmt.Printf("%s.\n", err)
 			fmt.Printf("\n[2] Authentication failed.\n")
 			os.Exit(2)
 		}
@@ -62,7 +62,7 @@ func main() {
 			}
 		} else {
 			if Options.pkix {
-				fmt.Printf("No DANE TLSA records found. Falling back to PKIX-only.\n")
+				fmt.Printf("No DANE TLSA records. Falling back to PKIX-only authentication.\n")
 			} else {
 				fmt.Printf("No DANE TLSA records found. Aborting.\n")
 				fmt.Printf("\n[2] Authentication failed.\n")
