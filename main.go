@@ -19,7 +19,7 @@ import (
 )
 
 // Version string
-var Version = "0.2.0"
+var Version = "0.2.1"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
@@ -71,12 +71,9 @@ func doTLSA(hostname string, port int) *dane.TLSAinfo {
 //
 func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
 
-	var server *dane.Server
 	var config *dane.Config
 
-	server = dane.NewServer(hostname, ip, port)
-	config = dane.NewConfig()
-	config.SetServer(server)
+	config = dane.NewConfig(hostname, ip, port)
 	config.NoVerify = Options.noverify
 	config.DANE = Options.DANE
 	config.PKIX = Options.PKIX
