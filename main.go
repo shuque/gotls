@@ -9,34 +9,86 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"os"
 	"path"
-	"time"
+
+	"github.com/shuque/dane"
 )
 
 // Version string
-var Version = "0.1.0"
+var Version = "0.2.0"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
 
-// Defaults
-var (
-	defaultDNSTimeout   = 3
-	defaultDNSRetries   = 3
-	defaultTCPTimeout   = 4
-	defaultResolverPort = 53
-)
+//
+// finalResult -
+//
+func finalResult(ipcount, successcount int) {
+	if Options.noverify {
+		fmt.Printf("\n[4] Server authentication was not performed.\n")
+		os.Exit(4)
+	} else if successcount == ipcount {
+		fmt.Printf("\n[0] Authentication succeeded for all (%d) peers.\n", ipcount)
+		os.Exit(0)
+	} else if successcount > 0 {
+		fmt.Printf("\n[1] Authentication succeeded for some (%d of %d) peers.\n",
+			successcount, ipcount)
+		os.Exit(1)
+	} else {
+		fmt.Printf("\n[2] Authentication failed for all (%d) peers.\n", ipcount)
+		os.Exit(2)
+	}
+}
 
-// Globals
-var debug = false
-var qopts = QueryOptions{adflag: true,
-	rdflag:  true,
-	payload: 1460,
-	timeout: time.Second * time.Duration(defaultDNSTimeout),
-	retries: defaultDNSRetries}
-var tlsa *TLSAinfo
+//
+// doTLSA -
+//
+func doTLSA(hostname string, port int) *dane.TLSAinfo {
+
+	tlsa, err := dane.GetTLSA(Options.resolver, hostname, port)
+	if err != nil {
+		fmt.Printf("GetTLSA: %s\n", err.Error())
+		os.Exit(2)
+	}
+	if tlsa == nil {
+		fmt.Printf("No DANE TLSA records found.\n")
+		if !Options.PKIX {
+			os.Exit(2)
+		}
+	} else if debug {
+		tlsa.Print()
+	}
+
+	return tlsa
+}
+
+//
+// getDaneConfig -
+//
+func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
+
+	var server *dane.Server
+	var config *dane.Config
+
+	server = dane.NewServer(hostname, ip, port)
+	config = dane.NewConfig()
+	config.SetServer(server)
+	config.NoVerify = Options.noverify
+	config.DANE = Options.DANE
+	config.PKIX = Options.PKIX
+	config.DaneEEname = Options.DaneEEname
+	config.SMTPAnyMode = Options.SMTPAnyMode
+	if Options.starttls != "" {
+		config.SetAppName(Options.starttls)
+		config.SetServiceName(Options.sname)
+	}
+
+	return config
+}
 
 //
 // main -
@@ -44,68 +96,83 @@ var tlsa *TLSAinfo
 func main() {
 
 	var err error
-	var server string
+	var hostname string
 	var port int
+	var config *dane.Config
+	var conn *tls.Conn
+	var tlsa *dane.TLSAinfo
+	var needSecure bool
 
-	server, port = parseArgs(os.Args)
+	hostname, port = parseArgs(os.Args)
 
-	if Options.dane {
-		tlsa, err = getTLSA(Options.resolver, Options.rport, server, port)
-		if err != nil {
-			fmt.Printf("%s.\n", err)
-			fmt.Printf("\n[2] Authentication failed.\n")
-			os.Exit(2)
-		}
-		if tlsa != nil {
-			if debug {
-				tlsa.Print()
-			}
-		} else {
-			if Options.pkix {
-				fmt.Printf("No DANE TLSA records. Falling back to PKIX-only authentication.\n")
-			} else {
-				fmt.Printf("No DANE TLSA records found. Aborting.\n")
-				fmt.Printf("\n[2] Authentication failed.\n")
-				os.Exit(2)
-			}
-		}
+	if Options.DANE {
+		tlsa = doTLSA(hostname, port)
 	}
 
-	ipList, err := getAddresses(Options.resolver, Options.rport, server)
+	needSecure = (tlsa != nil)
+	iplist, err := dane.GetAddresses(Options.resolver, hostname, needSecure)
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		fmt.Printf("GetAddresses: %s\n", err)
 		os.Exit(2)
 	}
-	countIP := len(ipList)
-	if countIP == 0 {
-		fmt.Printf("No addresses found for %s.\n", server)
+
+	countIP := len(iplist)
+	if countIP < 1 {
+		fmt.Printf("No addresses found for %s.\n", hostname)
 		os.Exit(2)
 	}
 
 	countSuccess := 0
-	for _, ip := range ipList {
-		fmt.Printf("\n## Checking %s %s port %d\n", server, ip, port)
-		err = checkTLS(server, ip, port)
-		if err != nil {
-			fmt.Printf("%s\n", err.Error())
+
+	for _, ip := range iplist {
+
+		fmt.Printf("\n## Checking %s %s port %d\n", hostname, ip, port)
+		config = getDaneConfig(hostname, ip, port)
+		config.SetTLSA(tlsa)
+
+		if config.Appname == "" {
+			conn, err = dane.DialTLS(config)
 		} else {
-			countSuccess++
+			conn, err = dane.DialStartTLS(config)
+		}
+
+		if debug {
+			if !config.NoVerify && config.TLSA != nil {
+				config.TLSA.Results()
+			}
+		}
+
+		if err != nil {
+			fmt.Printf("Result: FAILED: %s\n", err.Error())
+			continue
+		}
+
+		countSuccess++
+
+		if debug {
+			if config.Transcript != "" {
+				fmt.Printf("## STARTTLS Transcript:\n%s", config.Transcript)
+			}
+			cs := conn.ConnectionState()
+			fmt.Printf("## Peer Certificate Chain:\n")
+			for i, cert := range cs.PeerCertificates {
+				fmt.Printf("  %2d %v\n", i, cert.Subject)
+				fmt.Printf("     %v\n", cert.Issuer)
+			}
+			if !config.NoVerify {
+				printPKIXVerifiedChains(config.VerifiedChains)
+			}
+			printConnectionDetails(cs)
+		}
+
+		conn.Close()
+
+		if config.Okdane {
+			fmt.Printf("Result: DANE OK\n")
+		} else if config.Okpkix {
+			fmt.Printf("Result: PKIX OK\n")
 		}
 	}
 
-	if Options.noverify {
-		fmt.Printf("\n[4] Server authentication was not performed.\n")
-		os.Exit(4)
-	} else if countSuccess == countIP {
-		fmt.Printf("\n[0] Authentication succeeded for all (%d) peers.\n", countIP)
-		os.Exit(0)
-	} else if countSuccess > 0 {
-		fmt.Printf("\n[1] Authentication succeeded for some (%d of %d) peers.\n",
-			countSuccess, countIP)
-		os.Exit(1)
-	} else {
-		fmt.Printf("\n[2] Authentication failed for all (%d) peers.\n", countIP)
-		os.Exit(2)
-	}
-
+	finalResult(countIP, countSuccess)
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/shuque/dane"
 )
 
 //
@@ -19,21 +20,32 @@ type OptionsStruct struct {
 	useV4       bool
 	useV6       bool
 	sname       string
-	dane        bool
-	pkix        bool
-	daneEEname  bool
+	DANE        bool
+	PKIX        bool
+	DaneEEname  bool
 	noverify    bool
-	smtpAnyMode bool
+	SMTPAnyMode bool
 	starttls    string
 	timeout     time.Duration
 	retries     int
-	resolver    net.IP
+	resolver    *dane.Resolver
 	rport       int
 	printchain  bool
 }
 
 // Options -
 var Options OptionsStruct
+
+// Defaults
+var (
+	defaultDNSTimeout   = 3
+	defaultDNSRetries   = 3
+	defaultTCPTimeout   = 4
+	defaultResolverPort = 53
+)
+
+// Globals
+var debug = false
 
 //
 // parseArgs() - parse command line arguments.
@@ -50,11 +62,11 @@ func parseArgs(args []string) (server string, port int) {
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
 	flag.StringVar(&Options.starttls, "s", "", "STARTTLS app (smtp,imap,pop3)")
 	flag.StringVar(&Options.sname, "n", "", "Service name")
-	tmpString := flag.String("r", "", "Resolver IP address")
+	tmpResolver := flag.String("r", "", "Resolver IP address")
 	flag.IntVar(&Options.rport, "rp", defaultResolverPort, "Resolver port number")
-	tmpInt := flag.Int("t", defaultDNSTimeout, "query timeout in seconds")
-	flag.BoolVar(&Options.daneEEname, "dane-ee-name", false, "DANE EE name")
-	flag.BoolVar(&Options.smtpAnyMode, "smtp-any-mode", false, "SMTP any mode")
+	tmpTimeout := flag.Int("t", defaultDNSTimeout, "query timeout in seconds")
+	flag.BoolVar(&Options.DaneEEname, "dane-ee-name", false, "DANE EE name")
+	flag.BoolVar(&Options.SMTPAnyMode, "smtp-any-mode", false, "SMTP any mode")
 	flag.BoolVar(&Options.noverify, "noverify", false, "noverify")
 	flag.BoolVar(&Options.printchain, "printchain", false, "printchain")
 
@@ -90,22 +102,25 @@ Usage: %s [Options] <host> [<port>]
 		os.Exit(1)
 	}
 
-	if *tmpString != "" {
-		Options.resolver = net.ParseIP(*tmpString)
-		if Options.resolver == nil {
-			fmt.Printf("Can't parse resolver IP address: %s\n", *tmpString)
+	if *tmpResolver != "" {
+		resolverIP := net.ParseIP(*tmpResolver)
+		if resolverIP == nil {
+			fmt.Printf("Can't parse resolver IP address: %s\n", *tmpResolver)
 			flag.Usage()
 			os.Exit(3)
 		}
+		Options.resolver = dane.NewResolver(resolverIP, Options.rport)
 	} else {
-		Options.resolver, err = getResolver()
+		Options.resolver, err = dane.GetResolver("")
 		if err != nil {
 			fmt.Printf("Error obtaining resolver address: %s", err.Error())
 			os.Exit(3)
 		}
+		Options.resolver.Port = Options.rport
 	}
 
-	Options.timeout = time.Second * time.Duration(*tmpInt)
+	Options.timeout = time.Second * time.Duration(*tmpTimeout)
+	Options.resolver.Timeout = Options.timeout
 
 	if Options.useV4 && Options.useV6 {
 		fmt.Printf("Cannot specify both -4 and -6. Choose one.\n")
@@ -117,15 +132,17 @@ Usage: %s [Options] <host> [<port>]
 		Options.useV4 = true
 		Options.useV6 = true
 	}
+	Options.resolver.IPv6 = Options.useV6
+	Options.resolver.IPv4 = Options.useV4
 
 	switch mode {
 	case "":
-		Options.dane = true
-		Options.pkix = true
+		Options.DANE = true
+		Options.PKIX = true
 	case "dane":
-		Options.dane = true
+		Options.DANE = true
 	case "pkix":
-		Options.pkix = true
+		Options.PKIX = true
 	default:
 		fmt.Printf("Invalid mode specified: %s\n", mode)
 		flag.Usage()

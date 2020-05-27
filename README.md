@@ -9,7 +9,9 @@ prints out information about the TLS connection and the certificate.
 ### Pre-requisites
 
 * Go
-* Miek Gieben's Go dns package: https://github.com/miekg/dns
+* Go dane package: https://github.com/shuque/dane
+* Go dns package: https://github.com/miekg/dns
+
 
 DANE authentication requires the use of a validating DNS resolver,
 that sets the AD bit on authenticated responses. By default, this
@@ -47,7 +49,7 @@ Just run 'go build'. This will generate the executable 'gotls'.
 ### Usage:
 
 ```
-gotls, version 0.1.0
+gotls, version 0.2.0
 Usage: gotls [Options] <host> [<port>]
 
         If unspecified, the default port 443 is used.
@@ -88,10 +90,10 @@ Check the HTTPS (port 443) TLS service at www.huque.com.
 $ gotls www.huque.com
 
 ## Checking www.huque.com. 2600:3c03:e000:81::a port 443
-## Authentication: DANE OK
+Result: DANE OK
 
 ## Checking www.huque.com. 50.116.63.23 port 443
-## Authentication: DANE OK
+Result: DANE OK
 
 [0] Authentication succeeded for all (2) peers.
 ```
@@ -104,11 +106,11 @@ authentication:
 
 ```
 $ gotls www.amazon.com
-WARNING: Unauthenticated TLSA response.
-No DANE TLSA records found. Falling back to PKIX-only.
 
-## Checking www.amazon.com. 13.226.35.231 port 443
-## Authentication: PKIX OK
+No DANE TLSA records found.
+
+## Checking www.amazon.com. 99.84.117.249 port 443
+Result: PKIX OK
 
 [0] Authentication succeeded for all (1) peers.
 ```
@@ -118,9 +120,8 @@ Forcing DANE authentication for the previous service with the
 
 ```
 $ gotls -m dane www.amazon.com
-ERROR: TLSA response was unauthenticated. Use "-m pkix" for PKIX only.
 
-[2] Authentication failed.
+No DANE TLSA records found.
 ```
 
 Using the -d (debug) switch displays a great deal of additional
@@ -136,10 +137,12 @@ $ gotls -d www.huque.com
 
 DNS TLSA RRset:
   qname: _443._tcp.www.huque.com.
-  3 1 1 55f6db74c524acca28b52c0bcfc28eec4596f90d00c2056010ae79901b2eb049
   3 1 1 736a6032543cf64de9d4cfbd5bdffd329027fe1fe860b2396954a9d9db630fd1
+  3 1 1 55f6db74c524acca28b52c0bcfc28eec4596f90d00c2056010ae79901b2eb049
 
 ## Checking www.huque.com. 2600:3c03:e000:81::a port 443
+DANE TLSA 3 1 1 [736a6032..]: OK matched EE certificate
+DANE TLSA 3 1 1 [55f6db74..]: FAIL did not match EE certificate
 ## Peer Certificate Chain:
    0 CN=www.huque.com
      CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
@@ -152,9 +155,6 @@ DNS TLSA RRset:
      CN=DST Root CA X3,O=Digital Signature Trust Co.
    2 CN=DST Root CA X3,O=Digital Signature Trust Co.
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## DANE TLSA processing:
-   WARN: DANE TLSA 3 1 1 [55f6db74..] did not match certificate.
-   OK:   DANE TLSA 3 1 1 [736a6032..] matched EE certificate.
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -168,7 +168,7 @@ DNS TLSA RRset:
    PublicKey Algorithm: RSA 2048-Bits
    Inception:  2020-05-03 10:17:09 +0000 UTC
    Expiration: 2020-08-01 10:17:09 +0000 UTC
-   KU: DigitalSignature KeyEncipherment
+   KU: KeyEncipherment DigitalSignature
    EKU: ServerAuth ClientAuth
    Is CA?: false
    SKI: eb15c2265f29315b65468412e6a4a2d154f1e5e4
@@ -177,9 +177,11 @@ DNS TLSA RRset:
    CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
-## Authentication: DANE OK
+Result: DANE OK
 
 ## Checking www.huque.com. 50.116.63.23 port 443
+DANE TLSA 3 1 1 [736a6032..]: OK matched EE certificate
+DANE TLSA 3 1 1 [55f6db74..]: FAIL did not match EE certificate
 ## Peer Certificate Chain:
    0 CN=www.huque.com
      CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
@@ -192,9 +194,6 @@ DNS TLSA RRset:
      CN=DST Root CA X3,O=Digital Signature Trust Co.
    2 CN=DST Root CA X3,O=Digital Signature Trust Co.
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## DANE TLSA processing:
-   WARN: DANE TLSA 3 1 1 [55f6db74..] did not match certificate.
-   OK:   DANE TLSA 3 1 1 [736a6032..] matched EE certificate.
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -217,7 +216,7 @@ DNS TLSA RRset:
    CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
-## Authentication: DANE OK
+Result: DANE OK
 
 [0] Authentication succeeded for all (2) peers.
 ```
@@ -237,7 +236,8 @@ DNS TLSA RRset:
   3 1 1 6cf12d78fbf242909d01b96ab5590812954058dc32f8415f048fff064291921e
 
 ## Checking mta.openssl.org. 2001:608:c00:180::1:e6 port 25
-## STARTTLS application: smtp
+DANE TLSA 3 1 1 [6cf12d78..]: OK matched EE certificate
+## STARTTLS Transcript:
 recv: 220-mta.openssl.org ESMTP Postfix
 recv: 220 mta.openssl.org ESMTP Postfix
 send: EHLO localhost
@@ -264,8 +264,6 @@ recv: 220 2.0.0 Ready to start TLS
      CN=DST Root CA X3,O=Digital Signature Trust Co.
    2 CN=DST Root CA X3,O=Digital Signature Trust Co.
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## DANE TLSA processing:
-   OK:   DANE TLSA 3 1 1 [6cf12d78..] matched EE certificate.
 ## TLS Connection Info:
    TLS version: TLS1.2
    CipherSuite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
@@ -288,7 +286,7 @@ recv: 220 2.0.0 Ready to start TLS
    CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
-## Authentication: DANE OK
+Result: DANE OK
 
 [0] Authentication succeeded for all (1) peers.
 ```
