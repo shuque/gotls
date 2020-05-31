@@ -19,13 +19,13 @@ type OptionsStruct struct {
 	verbose     bool
 	useV4       bool
 	useV6       bool
-	sname       string
 	DANE        bool
 	PKIX        bool
 	DaneEEname  bool
 	noverify    bool
 	SMTPAnyMode bool
-	starttls    string
+	appname     string
+	sname       string
 	timeout     time.Duration
 	retries     int
 	resolver    *dane.Resolver
@@ -48,7 +48,7 @@ var (
 var debug = false
 
 //
-// parseArgs() - parse command line arguments.
+// parseArgs parses command line arguments.
 //
 func parseArgs(args []string) (server string, port int) {
 
@@ -60,7 +60,7 @@ func parseArgs(args []string) (server string, port int) {
 	flag.BoolVar(&Options.useV6, "6", false, "use IPv6 only")
 	flag.BoolVar(&Options.useV4, "4", false, "use IPv4 only")
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
-	flag.StringVar(&Options.starttls, "s", "", "STARTTLS app (smtp,imap,pop3)")
+	flag.StringVar(&Options.appname, "s", "", "STARTTLS app (smtp,imap,pop3)")
 	flag.StringVar(&Options.sname, "n", "", "Service name")
 	tmpResolver := flag.String("r", "", "Resolver IP address")
 	flag.IntVar(&Options.rport, "rp", defaultResolverPort, "Resolver port number")

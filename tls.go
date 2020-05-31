@@ -8,6 +8,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"strings"
+
+	"github.com/shuque/dane"
 )
 
 //
@@ -154,12 +156,12 @@ func printCertChainDetails(chain []*x509.Certificate) {
 }
 
 //
-// printPKIXVerifiedChains -
+// printVerifiedChains -
 //
-func printPKIXVerifiedChains(chains [][]*x509.Certificate) {
+func printVerifiedChains(chains [][]*x509.Certificate) {
 
 	for i, row := range chains {
-		fmt.Printf("## PKIX Verified Chain %d:\n", i)
+		fmt.Printf("## Verified Certificate Chain %d:\n", i)
 		for j, cert := range row {
 			fmt.Printf("  %2d %v\n", j, cert.Subject)
 			fmt.Printf("     %v\n", cert.Issuer)
@@ -171,9 +173,23 @@ func printPKIXVerifiedChains(chains [][]*x509.Certificate) {
 //
 // printConnectionDetails -
 //
-func printConnectionDetails(cs tls.ConnectionState) {
+func printConnectionDetails(conn *tls.Conn, config *dane.Config) {
 
 	var peerCerts []*x509.Certificate
+	cs := conn.ConnectionState()
+
+	if config.Transcript != "" {
+		fmt.Printf("## STARTTLS Transcript:\n%s", config.Transcript)
+	}
+
+	fmt.Printf("## Peer Certificate Chain:\n")
+	for i, cert := range cs.PeerCertificates {
+		fmt.Printf("  %2d %v\n", i, cert.Subject)
+		fmt.Printf("     %v\n", cert.Issuer)
+	}
+	if !config.NoVerify {
+		printVerifiedChains(config.VerifiedChains)
+	}
 
 	fmt.Printf("## TLS Connection Info:\n")
 	fmt.Printf("   TLS version: %s\n", TLSversion[cs.Version])

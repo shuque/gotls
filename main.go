@@ -1,10 +1,8 @@
-/*
- * gotls
- * Diagnostic tool that connects to a TLS server, performs DANE and PKIX
- * authentication of the server of the server, and prints miscellaneous
- * information about the certificates and DANE records.
- *
- */
+//
+// gotls is a diagnostic tool that connects to a TLS server, performs DANE and
+// PKIX authentication of the server of the server, and prints miscellaneous
+// information about the certificates and DANE records.
+//
 
 package main
 
@@ -19,7 +17,7 @@ import (
 )
 
 // Version string
-var Version = "0.2.1"
+var Version = "0.2.2"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
@@ -45,11 +43,11 @@ func finalResult(ipcount, successcount int) {
 }
 
 //
-// doTLSA -
+// doTLSA obtains DANE TLSA records for the given hostname and port.
 //
-func doTLSA(hostname string, port int) *dane.TLSAinfo {
+func doTLSA(resolver *dane.Resolver, hostname string, port int) *dane.TLSAinfo {
 
-	tlsa, err := dane.GetTLSA(Options.resolver, hostname, port)
+	tlsa, err := dane.GetTLSA(resolver, hostname, port)
 	if err != nil {
 		fmt.Printf("GetTLSA: %s\n", err.Error())
 		os.Exit(2)
@@ -67,6 +65,29 @@ func doTLSA(hostname string, port int) *dane.TLSAinfo {
 }
 
 //
+// GetAddresses
+//
+func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.IP {
+
+	iplist, err := dane.GetAddresses(Options.resolver, hostname, secure)
+	if err != nil {
+		fmt.Printf("GetAddresses: %s\n", err)
+		os.Exit(2)
+	}
+	if len(iplist) < 1 {
+		fmt.Printf("No addresses found for %s.\n", hostname)
+		os.Exit(2)
+	}
+	if debug {
+		fmt.Printf("IP Addresses found:\n")
+		for _, ip := range iplist {
+			fmt.Printf("  %s\n", ip)
+		}
+	}
+	return iplist
+}
+
+//
 // getDaneConfig -
 //
 func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
@@ -79,8 +100,8 @@ func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
 	config.PKIX = Options.PKIX
 	config.DaneEEname = Options.DaneEEname
 	config.SMTPAnyMode = Options.SMTPAnyMode
-	if Options.starttls != "" {
-		config.SetAppName(Options.starttls)
+	if Options.appname != "" {
+		config.SetAppName(Options.appname)
 		config.SetServiceName(Options.sname)
 	}
 
@@ -102,23 +123,25 @@ func main() {
 
 	hostname, port = parseArgs(os.Args)
 
-	if Options.DANE {
-		tlsa = doTLSA(hostname, port)
+	if debug {
+		fmt.Printf("Host: %s Port: %d\n", hostname, port)
+		if Options.appname != "" {
+			fmt.Printf("STARTTLS application: %s", Options.appname)
+			if Options.sname != "" {
+				fmt.Printf(", Service name: %s\n", Options.sname)
+			} else {
+				fmt.Println()
+			}
+		}
 	}
 
-	needSecure = (tlsa != nil)
-	iplist, err := dane.GetAddresses(Options.resolver, hostname, needSecure)
-	if err != nil {
-		fmt.Printf("GetAddresses: %s\n", err)
-		os.Exit(2)
+	if Options.DANE {
+		tlsa = doTLSA(Options.resolver, hostname, port)
 	}
+	needSecure = (tlsa != nil)
+	iplist := getAddresses(Options.resolver, hostname, needSecure)
 
 	countIP := len(iplist)
-	if countIP < 1 {
-		fmt.Printf("No addresses found for %s.\n", hostname)
-		os.Exit(2)
-	}
-
 	countSuccess := 0
 
 	for _, ip := range iplist {
@@ -133,10 +156,8 @@ func main() {
 			conn, err = dane.DialStartTLS(config)
 		}
 
-		if debug {
-			if !config.NoVerify && config.TLSA != nil {
-				config.TLSA.Results()
-			}
+		if debug && !config.NoVerify && config.TLSA != nil {
+			config.TLSA.Results()
 		}
 
 		if err != nil {
@@ -147,19 +168,7 @@ func main() {
 		countSuccess++
 
 		if debug {
-			if config.Transcript != "" {
-				fmt.Printf("## STARTTLS Transcript:\n%s", config.Transcript)
-			}
-			cs := conn.ConnectionState()
-			fmt.Printf("## Peer Certificate Chain:\n")
-			for i, cert := range cs.PeerCertificates {
-				fmt.Printf("  %2d %v\n", i, cert.Subject)
-				fmt.Printf("     %v\n", cert.Issuer)
-			}
-			if !config.NoVerify {
-				printPKIXVerifiedChains(config.VerifiedChains)
-			}
-			printConnectionDetails(cs)
+			printConnectionDetails(conn, config)
 		}
 
 		conn.Close()
