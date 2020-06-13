@@ -109,14 +109,14 @@ Usage: %s [Options] <host> [<port>]
 			flag.Usage()
 			os.Exit(3)
 		}
-		Options.resolver = dane.NewResolver(resolverIP, Options.rport)
+		resolvers := []*dane.Server{dane.NewServer("", resolverIP, Options.rport)}
+		Options.resolver = dane.NewResolver(resolvers)
 	} else {
 		Options.resolver, err = dane.GetResolver("")
 		if err != nil {
 			fmt.Printf("Error obtaining resolver address: %s", err.Error())
 			os.Exit(3)
 		}
-		Options.resolver.Port = Options.rport
 	}
 
 	Options.timeout = time.Second * time.Duration(*tmpTimeout)
