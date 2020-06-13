@@ -15,7 +15,7 @@ prints out information about the TLS connection and the certificate.
 
 DANE authentication requires the use of a validating DNS resolver,
 that sets the AD bit on authenticated responses. By default, this
-program uses the first resolver listed in /etc/resolv.conf, but
+program uses the resolvers listed in /etc/resolv.conf, but
 an alternate resolver address and port can be specified with the
 -r and -rp command line options. If no secure DANE TLSA records
 are found, or if the resolver doesn't validate, the program will
