@@ -17,7 +17,7 @@ import (
 )
 
 // Version string
-var Version = "0.2.3"
+var Version = "0.2.4"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
