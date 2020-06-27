@@ -72,7 +72,7 @@ func parseArgs(args []string) (server string, port int) {
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `
-%s, version %s
+%s, version %s (built with go dane v%s)
 Usage: %s [Options] <host> [<port>]
 
 	If unspecified, the default port 443 is used.
@@ -92,7 +92,7 @@ Usage: %s [Options] <host> [<port>]
 	-smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
 	-noverify        Don't perform server certificate verification
 	-printchain      Print details of full certificate chain
-`, Progname, Version, Progname, defaultResolverPort, defaultDNSTimeout)
+`, Progname, Version, dane.Version, Progname, defaultResolverPort, defaultDNSTimeout)
 	}
 
 	flag.Parse()
