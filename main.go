@@ -17,7 +17,7 @@ import (
 )
 
 // Version string
-var Version = "0.2.5"
+var Version = "0.2.6"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
@@ -161,6 +161,10 @@ func main() {
 		}
 
 		if err != nil {
+			if debug && config.PeerChain != nil {
+				fmt.Printf("## End-Entity Certificate Info:\n")
+				printCertDetails(config.PeerChain[0])
+			}
 			fmt.Printf("Result: FAILED: %s\n", err.Error())
 			continue
 		}
