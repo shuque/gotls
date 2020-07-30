@@ -17,7 +17,7 @@ import (
 )
 
 // Version string
-var Version = "0.2.6"
+var Version = "0.2.7"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
@@ -92,10 +92,9 @@ func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.I
 //
 func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
 
-	var config *dane.Config
-
-	config = dane.NewConfig(hostname, ip, port)
+	config := dane.NewConfig(hostname, ip, port)
 	config.NoVerify = Options.noverify
+	config.TimeoutTCP = defaultTCPTimeout
 	config.DANE = Options.DANE
 	config.PKIX = Options.PKIX
 	config.DaneEEname = Options.DaneEEname
@@ -149,6 +148,7 @@ func main() {
 		fmt.Printf("\n## Checking %s %s port %d\n", hostname, ip, port)
 		config = getDaneConfig(hostname, ip, port)
 		config.SetTLSA(tlsa)
+		config.SetDiagMode(true)
 
 		if config.Appname == "" {
 			conn, err = dane.DialTLS(config)
@@ -169,19 +169,24 @@ func main() {
 			continue
 		}
 
-		countSuccess++
-
 		if debug {
 			printConnectionDetails(conn, config)
 		}
 
 		conn.Close()
 
+		if config.DiagError != nil {
+			fmt.Printf("Result: FAILED: %s\n", config.DiagError.Error())
+			continue
+		}
+
 		if config.Okdane {
 			fmt.Printf("Result: DANE OK\n")
 		} else if config.Okpkix {
 			fmt.Printf("Result: PKIX OK\n")
 		}
+		countSuccess++
+
 	}
 
 	finalResult(countIP, countSuccess)

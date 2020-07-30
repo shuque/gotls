@@ -139,7 +139,6 @@ func printCertDetails(cert *x509.Certificate) {
 	fmt.Printf("   CA Issuer URL: %v\n", cert.IssuingCertificateURL)
 	fmt.Printf("   CRL Distribution: %v\n", cert.CRLDistributionPoints)
 	fmt.Printf("   Policy OIDs: %v\n", cert.PolicyIdentifiers)
-	return
 }
 
 //
@@ -152,7 +151,6 @@ func printCertChainDetails(chain []*x509.Certificate) {
 		fmt.Printf("## Certificate at Depth: %d\n", i)
 		printCertDetails(cert)
 	}
-	return
 }
 
 //
@@ -167,7 +165,6 @@ func printVerifiedChains(chains [][]*x509.Certificate) {
 			fmt.Printf("     %v\n", cert.Issuer)
 		}
 	}
-	return
 }
 
 //
@@ -205,5 +202,4 @@ func printConnectionDetails(conn *tls.Conn, config *dane.Config) {
 		fmt.Printf("## End-Entity Certificate Info:\n")
 		printCertDetails(peerCerts[0])
 	}
-	return
 }

@@ -16,7 +16,6 @@ import (
 // OptionsStruct - options
 //
 type OptionsStruct struct {
-	verbose     bool
 	useV4       bool
 	useV6       bool
 	DANE        bool
@@ -27,7 +26,6 @@ type OptionsStruct struct {
 	appname     string
 	sname       string
 	timeout     time.Duration
-	retries     int
 	resolver    *dane.Resolver
 	rport       int
 	printchain  bool
@@ -87,7 +85,7 @@ Usage: %s [Options] <host> [<port>]
 	-6               Use IPv6 transport only
 	-r ip            DNS Resolver IP address
 	-rp port         DNS Resolver port (default %d)
-	-t N             Query timeout value in seconds (default %d)
+	-t N             DNS query timeout value in seconds (default %d)
 	-dane-ee-name    Do hostname check even for DANE-EE mode
 	-smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
 	-noverify        Don't perform server certificate verification
@@ -121,6 +119,7 @@ Usage: %s [Options] <host> [<port>]
 
 	Options.timeout = time.Second * time.Duration(*tmpTimeout)
 	Options.resolver.Timeout = Options.timeout
+	Options.resolver.Retries = defaultDNSRetries
 
 	if Options.useV4 && Options.useV6 {
 		fmt.Printf("Cannot specify both -4 and -6. Choose one.\n")
