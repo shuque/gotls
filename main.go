@@ -13,11 +13,12 @@ import (
 	"os"
 	"path"
 
+	"github.com/miekg/dns"
 	"github.com/shuque/dane"
 )
 
 // Version string
-var Version = "0.2.7"
+var Version = "0.2.8"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
@@ -69,7 +70,7 @@ func doTLSA(resolver *dane.Resolver, hostname string, port int) *dane.TLSAinfo {
 //
 func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.IP {
 
-	iplist, err := dane.GetAddresses(Options.resolver, hostname, secure)
+	iplist, err := dane.GetAddresses(Options.resolver, dns.Fqdn(hostname), secure)
 	if err != nil {
 		fmt.Printf("GetAddresses: %s\n", err)
 		os.Exit(2)
@@ -93,6 +94,7 @@ func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.I
 func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
 
 	config := dane.NewConfig(hostname, ip, port)
+	config.SetDiagMode(true)
 	config.NoVerify = Options.noverify
 	config.TimeoutTCP = defaultTCPTimeout
 	config.DANE = Options.DANE
@@ -118,12 +120,14 @@ func main() {
 	var config *dane.Config
 	var conn *tls.Conn
 	var tlsa *dane.TLSAinfo
+	var iplist []net.IP
 	var needSecure bool
 
 	hostname, port = parseArgs(os.Args)
 
 	if debug {
 		fmt.Printf("Host: %s Port: %d\n", hostname, port)
+		fmt.Printf("SNI: %s\n", Options.SNI)
 		if Options.appname != "" {
 			fmt.Printf("STARTTLS application: %s", Options.appname)
 			if Options.sname != "" {
@@ -135,10 +139,15 @@ func main() {
 	}
 
 	if Options.DANE {
-		tlsa = doTLSA(Options.resolver, hostname, port)
+		tlsa = doTLSA(Options.resolver, Options.SNI, port)
 	}
-	needSecure = (tlsa != nil)
-	iplist := getAddresses(Options.resolver, hostname, needSecure)
+
+	if Options.ipAddress != nil {
+		iplist = []net.IP{Options.ipAddress}
+	} else {
+		needSecure = (tlsa != nil)
+		iplist = getAddresses(Options.resolver, hostname, needSecure)
+	}
 
 	countIP := len(iplist)
 	countSuccess := 0
@@ -148,7 +157,6 @@ func main() {
 		fmt.Printf("\n## Checking %s %s port %d\n", hostname, ip, port)
 		config = getDaneConfig(hostname, ip, port)
 		config.SetTLSA(tlsa)
-		config.SetDiagMode(true)
 
 		if config.Appname == "" {
 			conn, err = dane.DialTLS(config)

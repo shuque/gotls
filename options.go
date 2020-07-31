@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/miekg/dns"
 	"github.com/shuque/dane"
 )
 
@@ -18,8 +17,10 @@ import (
 type OptionsStruct struct {
 	useV4       bool
 	useV6       bool
+	ipAddress   net.IP
 	DANE        bool
 	PKIX        bool
+	SNI         string
 	DaneEEname  bool
 	noverify    bool
 	SMTPAnyMode bool
@@ -48,7 +49,7 @@ var debug = false
 //
 // parseArgs parses command line arguments.
 //
-func parseArgs(args []string) (server string, port int) {
+func parseArgs(args []string) (hostname string, port int) {
 
 	var err error
 	var mode string
@@ -58,6 +59,7 @@ func parseArgs(args []string) (server string, port int) {
 	flag.BoolVar(&Options.useV6, "6", false, "use IPv6 only")
 	flag.BoolVar(&Options.useV4, "4", false, "use IPv4 only")
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
+	flag.StringVar(&Options.SNI, "sni", "", "SNI name to send and verify")
 	flag.StringVar(&Options.appname, "s", "", "STARTTLS app (smtp,imap,pop3)")
 	flag.StringVar(&Options.sname, "n", "", "Service name")
 	tmpResolver := flag.String("r", "", "Resolver IP address")
@@ -73,12 +75,14 @@ func parseArgs(args []string) (server string, port int) {
 %s, version %s (built with go dane v%s)
 Usage: %s [Options] <host> [<port>]
 
-	If unspecified, the default port 443 is used.
+	If port is omitted, the default port 443 is used. If hostname is an
+	IP address string, then a name must be specified via the SNI option.
 
 	Options:
 	-h               Print this help string
 	-d               Debug mode - print additional info
 	-m mode          Mode: "dane" or "pkix"
+	-sni name        Specify SNI name to send and verify
 	-s starttls      STARTTLS application (smtp, imap, pop3)
 	-n name          Service name (if different from hostname)
 	-4               Use IPv4 transport only
@@ -149,10 +153,10 @@ Usage: %s [Options] <host> [<port>]
 	}
 
 	if flag.NArg() == 1 {
-		server = flag.Args()[0]
+		hostname = flag.Args()[0]
 		port = 443
 	} else if flag.NArg() == 2 {
-		server = flag.Args()[0]
+		hostname = flag.Args()[0]
 		port, err = strconv.Atoi(flag.Args()[1])
 		if err != nil {
 			fmt.Printf("Invalid port: %s\n", flag.Args()[1])
@@ -165,5 +169,17 @@ Usage: %s [Options] <host> [<port>]
 		os.Exit(3)
 	}
 
-	return dns.Fqdn(server), port
+	Options.ipAddress = net.ParseIP(hostname)
+	if Options.ipAddress != nil {
+		if Options.SNI == "" {
+			fmt.Printf("SNI must be specified with an IP address argument\n")
+			os.Exit(2)
+		}
+	} else {
+		if Options.SNI == "" {
+			Options.SNI = hostname
+		}
+	}
+
+	return hostname, port
 }

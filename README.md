@@ -49,15 +49,17 @@ Just run 'go build'. This will generate the executable 'gotls'.
 ### Usage:
 
 ```
-gotls, version 0.2.7
+gotls, version 0.2.8
 Usage: gotls [Options] <host> [<port>]
 
-        If unspecified, the default port 443 is used.
+        If port is omitted, the default port 443 is used. If hostname is an
+        IP address string, then a name must be specified via the SNI option.
 
         Options:
         -h               Print this help string
         -d               Debug mode - print additional info
         -m mode          Mode: "dane" or "pkix"
+        -sni name        Specify SNI name to send and verify
         -s starttls      STARTTLS application (smtp, imap, pop3)
         -n name          Service name (if different from hostname)
         -4               Use IPv4 transport only
