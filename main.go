@@ -154,8 +154,8 @@ func main() {
 
 	for _, ip := range iplist {
 
-		fmt.Printf("\n## Checking %s %s port %d\n", hostname, ip, port)
-		config = getDaneConfig(hostname, ip, port)
+		fmt.Printf("\n## Checking %s %s port %d\n", Options.SNI, ip, port)
+		config = getDaneConfig(Options.SNI, ip, port)
 		config.SetTLSA(tlsa)
 
 		if config.Appname == "" {
