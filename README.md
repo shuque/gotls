@@ -49,7 +49,7 @@ Just run 'go build'. This will generate the executable 'gotls'.
 ### Usage:
 
 ```
-gotls, version 0.2.8
+gotls, version 0.2.9
 Usage: gotls [Options] <host> [<port>]
 
         If port is omitted, the default port 443 is used. If hostname is an
