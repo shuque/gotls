@@ -49,7 +49,7 @@ Just run 'go build'. This will generate the executable 'gotls'.
 ### Usage:
 
 ```
-gotls, version 0.2.9
+gotls, version 0.3.0
 Usage: gotls [Options] <host> [<port>]
 
         If port is omitted, the default port 443 is used. If hostname is an
@@ -137,89 +137,108 @@ details of the entire certificate chain can be obtained via the
 ```
 $ gotls -d www.huque.com
 
-Host: www.huque.com. Port: 443
+Host: www.huque.com Port: 443
+SNI: www.huque.com
 DNS TLSA RRset:
   qname: _443._tcp.www.huque.com.
-  3 1 1 736a6032543cf64de9d4cfbd5bdffd329027fe1fe860b2396954a9d9db630fd1
-  3 1 1 55f6db74c524acca28b52c0bcfc28eec4596f90d00c2056010ae79901b2eb049
+  3 1 1 6c85cc093c31221cbff9e61cff5e9ca14bfeb0f9bbc341a7695290275d813cf4
+  3 1 1 de4369cf0866a1e7626d73db36dbfc4b74097c3c70489a2d3351b6e75e99583a
 IP Addresses found:
   2600:3c03:e000:81::a
   50.116.63.23
 
-## Checking www.huque.com. 2600:3c03:e000:81::a port 443
-DANE TLSA 3 1 1 [736a6032..]: OK matched EE certificate
-DANE TLSA 3 1 1 [55f6db74..]: FAIL did not match EE certificate
+## Checking www.huque.com 2600:3c03:e000:81::a port 443
+DANE TLSA 3 1 1 [6c85cc09..]: OK matched EE certificate
+DANE TLSA 3 1 1 [de4369cf..]: FAIL did not match EE certificate
 ## Peer Certificate Chain:
    0 CN=www.huque.com
-     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## Verified Certificate Chain 0:
+## PKIX Certificate Chain 0:
    0 CN=www.huque.com
-     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-     CN=DST Root CA X3,O=Digital Signature Trust Co.
-   2 CN=DST Root CA X3,O=Digital Signature Trust Co.
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+## DANE Certificate Chain 0:
+   0 CN=www.huque.com
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
      CN=DST Root CA X3,O=Digital Signature Trust Co.
 ## TLS Connection Info:
-   TLS version: TLS1.2
-   CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+   TLS version: TLS1.3
+   CipherSuite: TLS_AES_128_GCM_SHA256
 ## End-Entity Certificate Info:
    X509 version: 3
-   Serial#: 3e041f5c8966fedc98553ae09e071b1c615
+   Serial#: 32b409bacd77855987674821c95f997dc2b
    Subject: CN=www.huque.com
-   Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+   Issuer:  CN=R3,O=Let's Encrypt,C=US
    SAN dNSName: www.huque.com
    Signature Algorithm: SHA256-RSA
    PublicKey Algorithm: RSA 2048-Bits
-   Inception:  2020-05-03 10:17:09 +0000 UTC
-   Expiration: 2020-08-01 10:17:09 +0000 UTC
+   Inception:  2022-02-18 18:09:53 +0000 UTC
+   Expiration: 2022-05-19 18:09:52 +0000 UTC
    KU: DigitalSignature KeyEncipherment
    EKU: ServerAuth ClientAuth
    Is CA?: false
-   SKI: eb15c2265f29315b65468412e6a4a2d154f1e5e4
-   AKI: a84a6a63047dddbae6d139b7a64565eff3a8eca1
-   OSCP Servers: [http://ocsp.int-x3.letsencrypt.org]
-   CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
+   SKI: e2fc45cf4127bb62abead6bf3c74a31bc068f1c2
+   AKI: 142eb317b75856cbae500940e61faf9d8b14c2c6
+   OSCP Servers: [http://r3.o.lencr.org]
+   CA Issuer URL: [http://r3.i.lencr.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
 Result: DANE OK
 
-## Checking www.huque.com. 50.116.63.23 port 443
-DANE TLSA 3 1 1 [736a6032..]: OK matched EE certificate
-DANE TLSA 3 1 1 [55f6db74..]: FAIL did not match EE certificate
+## Checking www.huque.com 50.116.63.23 port 443
+DANE TLSA 3 1 1 [6c85cc09..]: OK matched EE certificate
+DANE TLSA 3 1 1 [de4369cf..]: FAIL did not match EE certificate
 ## Peer Certificate Chain:
    0 CN=www.huque.com
-     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## Verified Certificate Chain 0:
+## PKIX Certificate Chain 0:
    0 CN=www.huque.com
-     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-     CN=DST Root CA X3,O=Digital Signature Trust Co.
-   2 CN=DST Root CA X3,O=Digital Signature Trust Co.
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+## DANE Certificate Chain 0:
+   0 CN=www.huque.com
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
      CN=DST Root CA X3,O=Digital Signature Trust Co.
 ## TLS Connection Info:
-   TLS version: TLS1.2
-   CipherSuite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+   TLS version: TLS1.3
+   CipherSuite: TLS_AES_128_GCM_SHA256
 ## End-Entity Certificate Info:
    X509 version: 3
-   Serial#: 3e041f5c8966fedc98553ae09e071b1c615
+   Serial#: 32b409bacd77855987674821c95f997dc2b
    Subject: CN=www.huque.com
-   Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+   Issuer:  CN=R3,O=Let's Encrypt,C=US
    SAN dNSName: www.huque.com
    Signature Algorithm: SHA256-RSA
    PublicKey Algorithm: RSA 2048-Bits
-   Inception:  2020-05-03 10:17:09 +0000 UTC
-   Expiration: 2020-08-01 10:17:09 +0000 UTC
+   Inception:  2022-02-18 18:09:53 +0000 UTC
+   Expiration: 2022-05-19 18:09:52 +0000 UTC
    KU: KeyEncipherment DigitalSignature
    EKU: ServerAuth ClientAuth
    Is CA?: false
-   SKI: eb15c2265f29315b65468412e6a4a2d154f1e5e4
-   AKI: a84a6a63047dddbae6d139b7a64565eff3a8eca1
-   OSCP Servers: [http://ocsp.int-x3.letsencrypt.org]
-   CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
+   SKI: e2fc45cf4127bb62abead6bf3c74a31bc068f1c2
+   AKI: 142eb317b75856cbae500940e61faf9d8b14c2c6
+   OSCP Servers: [http://r3.o.lencr.org]
+   CA Issuer URL: [http://r3.i.lencr.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
 Result: DANE OK
@@ -237,16 +256,21 @@ mta.openssl.org port 25:
 ```
 $ gotls -d -6 -s smtp mta.openssl.org 25
 
+Host: mta.openssl.org Port: 25
+SNI: mta.openssl.org
+STARTTLS application: smtp
 DNS TLSA RRset:
   qname: _25._tcp.mta.openssl.org.
   3 1 1 6cf12d78fbf242909d01b96ab5590812954058dc32f8415f048fff064291921e
+IP Addresses found:
+  2001:608:c00:180::1:e6
 
-## Checking mta.openssl.org. 2001:608:c00:180::1:e6 port 25
+## Checking mta.openssl.org 2001:608:c00:180::1:e6 port 25
 DANE TLSA 3 1 1 [6cf12d78..]: OK matched EE certificate
 ## STARTTLS Transcript:
 recv: 220-mta.openssl.org ESMTP Postfix
 recv: 220 mta.openssl.org ESMTP Postfix
-send: EHLO localhost
+send: EHLO cheetara.huque.com
 recv: 250-mta.openssl.org
 recv: 250-PIPELINING
 recv: 250-SIZE 36700160
@@ -255,41 +279,51 @@ recv: 250-ETRN
 recv: 250-STARTTLS
 recv: 250-ENHANCEDSTATUSCODES
 recv: 250-8BITMIME
-recv: 250 DSN
+recv: 250-DSN
+recv: 250 CHUNKING
 send: STARTTLS
 recv: 220 2.0.0 Ready to start TLS
 ## Peer Certificate Chain:
    0 CN=mta.openssl.org
-     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
      CN=DST Root CA X3,O=Digital Signature Trust Co.
-## PKIX Verified Chain 0:
+## PKIX Certificate Chain 0:
    0 CN=mta.openssl.org
-     CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-   1 CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
-     CN=DST Root CA X3,O=Digital Signature Trust Co.
-   2 CN=DST Root CA X3,O=Digital Signature Trust Co.
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+## DANE Certificate Chain 0:
+   0 CN=mta.openssl.org
+     CN=R3,O=Let's Encrypt,C=US
+   1 CN=R3,O=Let's Encrypt,C=US
+     CN=ISRG Root X1,O=Internet Security Research Group,C=US
+   2 CN=ISRG Root X1,O=Internet Security Research Group,C=US
      CN=DST Root CA X3,O=Digital Signature Trust Co.
 ## TLS Connection Info:
-   TLS version: TLS1.2
-   CipherSuite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+   TLS version: TLS1.3
+   CipherSuite: TLS_AES_128_GCM_SHA256
 ## End-Entity Certificate Info:
    X509 version: 3
-   Serial#: 3052db8c7f9b73c1a94b78535ab43bcacef
+   Serial#: 368362cd51ed35691bafe9deb7d0e0b46cf
    Subject: CN=mta.openssl.org
-   Issuer:  CN=Let's Encrypt Authority X3,O=Let's Encrypt,C=US
+   Issuer:  CN=R3,O=Let's Encrypt,C=US
    SAN dNSName: mta.openssl.org
    Signature Algorithm: SHA256-RSA
    PublicKey Algorithm: RSA 4096-Bits
-   Inception:  2020-04-22 23:00:11 +0000 UTC
-   Expiration: 2020-07-21 23:00:11 +0000 UTC
+   Inception:  2022-02-02 11:00:05 +0000 UTC
+   Expiration: 2022-05-03 11:00:04 +0000 UTC
    KU: DigitalSignature KeyEncipherment
    EKU: ServerAuth ClientAuth
    Is CA?: false
    SKI: e27f74ac4c9b0c6694d6af580f005d7f34e0e80c
-   AKI: a84a6a63047dddbae6d139b7a64565eff3a8eca1
-   OSCP Servers: [http://ocsp.int-x3.letsencrypt.org]
-   CA Issuer URL: [http://cert.int-x3.letsencrypt.org/]
+   AKI: 142eb317b75856cbae500940e61faf9d8b14c2c6
+   OSCP Servers: [http://r3.o.lencr.org]
+   CA Issuer URL: [http://r3.i.lencr.org/]
    CRL Distribution: []
    Policy OIDs: [2.23.140.1.2.1 1.3.6.1.4.1.44947.1.1.1]
 Result: DANE OK

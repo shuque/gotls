@@ -154,12 +154,12 @@ func printCertChainDetails(chain []*x509.Certificate) {
 }
 
 //
-// printVerifiedChains -
+// printCertChains -
 //
-func printVerifiedChains(chains [][]*x509.Certificate) {
+func printCertChains(chains [][]*x509.Certificate, name string) {
 
 	for i, row := range chains {
-		fmt.Printf("## Verified Certificate Chain %d:\n", i)
+		fmt.Printf("## %s Certificate Chain %d:\n", name, i)
 		for j, cert := range row {
 			fmt.Printf("  %2d %v\n", j, cert.Subject)
 			fmt.Printf("     %v\n", cert.Issuer)
@@ -185,9 +185,11 @@ func printConnectionDetails(conn *tls.Conn, config *dane.Config) {
 		fmt.Printf("     %v\n", cert.Issuer)
 	}
 	if !config.NoVerify {
-		printVerifiedChains(config.VerifiedChains)
+		printCertChains(config.PKIXChains, "PKIX")
 	}
-
+	if config.DANE {
+		printCertChains(config.DANEChains, "DANE")
+	}
 	fmt.Printf("## TLS Connection Info:\n")
 	fmt.Printf("   TLS version: %s\n", TLSversion[cs.Version])
 	fmt.Printf("   CipherSuite: %s\n", tls.CipherSuiteName(cs.CipherSuite))
