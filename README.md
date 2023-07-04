@@ -49,7 +49,7 @@ Just run 'go build'. This will generate the executable 'gotls'.
 ### Usage:
 
 ```
-gotls, version 0.3.1
+gotls, version 0.3.2 (built with go dane v0.2.1)
 Usage: gotls [Options] <host> [<port>]
 
         If port is omitted, the default port 443 is used. If hostname is an
@@ -59,14 +59,16 @@ Usage: gotls [Options] <host> [<port>]
         -h               Print this help string
         -d               Debug mode - print additional info
         -m mode          Mode: "dane" or "pkix"
+        -cafile FILE     PKIX Root CA file in PEM format
         -sni name        Specify SNI name to send and verify
         -s starttls      STARTTLS application (smtp, imap, pop3)
         -n name          Service name (if different from hostname)
+        -version VER     TLS version to use (e.g. "1.3")
         -4               Use IPv4 transport only
         -6               Use IPv6 transport only
         -r ip            DNS Resolver IP address
         -rp port         DNS Resolver port (default 53)
-        -t N             Query timeout value in seconds (default 3)
+        -t N             DNS query timeout value in seconds (default 3)
         -dane-ee-name    Do hostname check even for DANE-EE mode
         -smtp-any-mode   Allow STARTTLS SMTP for any DANE usage mode
         -noverify        Don't perform server certificate verification

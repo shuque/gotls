@@ -11,10 +11,10 @@ import (
 	"github.com/shuque/dane"
 )
 
-//
 // OptionsStruct - options
-//
 type OptionsStruct struct {
+	TLSversion  string
+	CAfile      string
 	useV4       bool
 	useV6       bool
 	ipAddress   net.IP
@@ -46,9 +46,7 @@ var (
 // Globals
 var debug = false
 
-//
 // parseArgs parses command line arguments.
-//
 func parseArgs(args []string) (hostname string, port int) {
 
 	var err error
@@ -56,6 +54,8 @@ func parseArgs(args []string) (hostname string, port int) {
 
 	help := flag.Bool("h", false, "Print this help string")
 	flag.BoolVar(&debug, "d", false, "Debug mode")
+	flag.StringVar(&Options.TLSversion, "version", "", "TLS version to use")
+	flag.StringVar(&Options.CAfile, "cafile", "", "PKIX Root CA file in PEM format")
 	flag.BoolVar(&Options.useV6, "6", false, "use IPv6 only")
 	flag.BoolVar(&Options.useV4, "4", false, "use IPv4 only")
 	flag.StringVar(&mode, "m", "", "Mode: dane or pkix")
@@ -82,9 +82,11 @@ Usage: %s [Options] <host> [<port>]
 	-h               Print this help string
 	-d               Debug mode - print additional info
 	-m mode          Mode: "dane" or "pkix"
+	-cafile FILE     PKIX Root CA file in PEM format
 	-sni name        Specify SNI name to send and verify
 	-s starttls      STARTTLS application (smtp, imap, pop3)
 	-n name          Service name (if different from hostname)
+	-version VER     TLS version to use (e.g. "1.3")
 	-4               Use IPv4 transport only
 	-6               Use IPv6 transport only
 	-r ip            DNS Resolver IP address

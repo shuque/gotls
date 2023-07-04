@@ -9,6 +9,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -18,14 +19,12 @@ import (
 )
 
 // Version string
-var Version = "0.3.1"
+var Version = "0.3.2"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
 
-//
 // finalResult -
-//
 func finalResult(ipcount, successcount int) {
 	if Options.noverify {
 		fmt.Printf("\n[4] Server authentication was not performed.\n")
@@ -43,9 +42,7 @@ func finalResult(ipcount, successcount int) {
 	}
 }
 
-//
 // doTLSA obtains DANE TLSA records for the given hostname and port.
-//
 func doTLSA(resolver *dane.Resolver, hostname string, port int) *dane.TLSAinfo {
 
 	tlsa, err := dane.GetTLSA(resolver, hostname, port)
@@ -65,9 +62,7 @@ func doTLSA(resolver *dane.Resolver, hostname string, port int) *dane.TLSAinfo {
 	return tlsa
 }
 
-//
 // GetAddresses
-//
 func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.IP {
 
 	iplist, err := dane.GetAddresses(Options.resolver, dns.Fqdn(hostname), secure)
@@ -88,9 +83,7 @@ func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.I
 	return iplist
 }
 
-//
 // getDaneConfig -
-//
 func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
 
 	config := dane.NewConfig(hostname, ip, port)
@@ -109,14 +102,13 @@ func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
 	return config
 }
 
-//
 // main -
-//
 func main() {
 
 	var err error
 	var hostname string
 	var port int
+	var certdata []byte
 	var config *dane.Config
 	var conn *tls.Conn
 	var tlsa *dane.TLSAinfo
@@ -152,11 +144,27 @@ func main() {
 	countIP := len(iplist)
 	countSuccess := 0
 
+	if Options.CAfile != "" {
+		certdata, err = ioutil.ReadFile(Options.CAfile)
+		if err != nil {
+			fmt.Printf("Failed to read CA data: %s\n", err.Error())
+			os.Exit(3)
+		}
+	}
+
 	for _, ip := range iplist {
 
 		fmt.Printf("\n## Checking %s %s port %d\n", Options.SNI, ip, port)
 		config = getDaneConfig(Options.SNI, ip, port)
 		config.SetTLSA(tlsa)
+
+		if Options.TLSversion != "" {
+			config.TLSversion = TLSstring2version[Options.TLSversion]
+		}
+
+		if Options.CAfile != "" {
+			config.PKIXRootCA = certdata
+		}
 
 		if config.Appname == "" {
 			conn, err = dane.DialTLS(config)

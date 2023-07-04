@@ -12,20 +12,23 @@ import (
 	"github.com/shuque/dane"
 )
 
-//
-// TLSversion - map TLS verson number to string
-//
-var TLSversion = map[uint16]string{
-	0x0300: "SSL3.0",
-	0x0301: "TLS1.0",
-	0x0302: "TLS1.1",
-	0x0303: "TLS1.2",
-	0x0304: "TLS1.3",
+// TLSversion2string - map TLS verson number to string
+var TLSversion2string = map[uint16]string{
+	tls.VersionTLS10: "1.0",
+	tls.VersionTLS11: "1.1",
+	tls.VersionTLS12: "1.2",
+	tls.VersionTLS13: "1.3",
 }
 
-//
+// TLSstring2version - map TLS version string to number
+var TLSstring2version = map[string]uint16{
+	"1.0": tls.VersionTLS10,
+	"1.1": tls.VersionTLS11,
+	"1.2": tls.VersionTLS12,
+	"1.3": tls.VersionTLS13,
+}
+
 // KeyUsage value to string
-//
 var KeyUsage = map[x509.KeyUsage]string{
 	x509.KeyUsageDigitalSignature:  "DigitalSignature",
 	x509.KeyUsageContentCommitment: "ContentCommitment",
@@ -38,9 +41,7 @@ var KeyUsage = map[x509.KeyUsage]string{
 	x509.KeyUsageDecipherOnly:      "DecipherOnly",
 }
 
-//
 // ExtendedKeyUsage value to string
-//
 var ExtendedKeyUsage = map[x509.ExtKeyUsage]string{
 	x509.ExtKeyUsageAny:                            "Any",
 	x509.ExtKeyUsageServerAuth:                     "ServerAuth",
@@ -58,9 +59,7 @@ var ExtendedKeyUsage = map[x509.ExtKeyUsage]string{
 	x509.ExtKeyUsageMicrosoftKernelCodeSigning:     "MicrosoftKernelCodeSigning",
 }
 
-//
 // KU2Strings -
-//
 func KU2Strings(ku x509.KeyUsage) string {
 
 	var result []string
@@ -72,9 +71,7 @@ func KU2Strings(ku x509.KeyUsage) string {
 	return strings.Join(result, " ")
 }
 
-//
 // EKU2Strings -
-//
 func EKU2Strings(ekulist []x509.ExtKeyUsage) string {
 
 	var result []string
@@ -84,9 +81,7 @@ func EKU2Strings(ekulist []x509.ExtKeyUsage) string {
 	return strings.Join(result, " ")
 }
 
-//
 // KeySizeInBits -
-//
 func KeySizeInBits(publickey interface{}) int {
 
 	switch v := publickey.(type) {
@@ -101,10 +96,8 @@ func KeySizeInBits(publickey interface{}) int {
 	}
 }
 
-//
 // printCertDetails --
 // Print some details of the certificate.
-//
 func printCertDetails(cert *x509.Certificate) {
 
 	fmt.Printf("   X509 version: %d\n", cert.Version)
@@ -141,9 +134,7 @@ func printCertDetails(cert *x509.Certificate) {
 	fmt.Printf("   Policy OIDs: %v\n", cert.PolicyIdentifiers)
 }
 
-//
 // printCertChainDetails -
-//
 func printCertChainDetails(chain []*x509.Certificate) {
 
 	fmt.Printf("## -------------- FULL Certificate Chain ----------------\n")
@@ -153,9 +144,7 @@ func printCertChainDetails(chain []*x509.Certificate) {
 	}
 }
 
-//
 // printCertChains -
-//
 func printCertChains(chains [][]*x509.Certificate, name string) {
 
 	for i, row := range chains {
@@ -167,9 +156,7 @@ func printCertChains(chains [][]*x509.Certificate, name string) {
 	}
 }
 
-//
 // printConnectionDetails -
-//
 func printConnectionDetails(conn *tls.Conn, config *dane.Config) {
 
 	var peerCerts []*x509.Certificate
@@ -191,7 +178,7 @@ func printConnectionDetails(conn *tls.Conn, config *dane.Config) {
 		printCertChains(config.DANEChains, "DANE")
 	}
 	fmt.Printf("## TLS Connection Info:\n")
-	fmt.Printf("   TLS version: %s\n", TLSversion[cs.Version])
+	fmt.Printf("   TLS version: %s\n", TLSversion2string[cs.Version])
 	fmt.Printf("   CipherSuite: %s\n", tls.CipherSuiteName(cs.CipherSuite))
 	if cs.NegotiatedProtocol != "" {
 		fmt.Printf("NegotiatedProtocol: %s\n", cs.NegotiatedProtocol)

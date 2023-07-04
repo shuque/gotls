@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/miekg/dns v1.1.51
-	github.com/shuque/dane v0.2.0
+	github.com/shuque/dane v0.2.1
 )
 
 require (
