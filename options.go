@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 type OptionsStruct struct {
 	TLSversion  string
 	CAfile      string
+	CAdata      []byte
 	useV4       bool
 	useV6       bool
 	ipAddress   net.IP
@@ -126,6 +128,14 @@ Usage: %s [Options] <host> [<port>]
 	Options.timeout = time.Second * time.Duration(*tmpTimeout)
 	Options.resolver.Timeout = Options.timeout
 	Options.resolver.Retries = defaultDNSRetries
+
+	if Options.CAfile != "" {
+		Options.CAdata, err = ioutil.ReadFile(Options.CAfile)
+		if err != nil {
+			fmt.Printf("Failed to read CA data: %s\n", err.Error())
+			os.Exit(3)
+		}
+	}
 
 	if Options.useV4 && Options.useV6 {
 		fmt.Printf("Cannot specify both -4 and -6. Choose one.\n")

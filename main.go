@@ -9,7 +9,6 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -19,7 +18,7 @@ import (
 )
 
 // Version string
-var Version = "0.3.2"
+var Version = "0.3.3"
 
 // Progname - Program name
 var Progname string = path.Base(os.Args[0])
@@ -84,10 +83,16 @@ func getAddresses(resolver *dane.Resolver, hostname string, secure bool) []net.I
 }
 
 // getDaneConfig -
-func getDaneConfig(hostname string, ip net.IP, port int) *dane.Config {
+func getDaneConfig(ip net.IP, port int) *dane.Config {
 
-	config := dane.NewConfig(hostname, ip, port)
+	config := dane.NewConfig(Options.SNI, ip, port)
 	config.SetDiagMode(true)
+	if Options.TLSversion != "" {
+		config.TLSversion = TLSstring2version[Options.TLSversion]
+	}
+	if Options.CAfile != "" {
+		config.PKIXRootCA = Options.CAdata
+	}
 	config.NoVerify = Options.noverify
 	config.TimeoutTCP = defaultTCPTimeout
 	config.DANE = Options.DANE
@@ -108,12 +113,12 @@ func main() {
 	var err error
 	var hostname string
 	var port int
-	var certdata []byte
 	var config *dane.Config
 	var conn *tls.Conn
 	var tlsa *dane.TLSAinfo
 	var iplist []net.IP
 	var needSecure bool
+	var countSuccess int
 
 	hostname, port = parseArgs(os.Args)
 
@@ -141,30 +146,11 @@ func main() {
 		iplist = getAddresses(Options.resolver, hostname, needSecure)
 	}
 
-	countIP := len(iplist)
-	countSuccess := 0
-
-	if Options.CAfile != "" {
-		certdata, err = ioutil.ReadFile(Options.CAfile)
-		if err != nil {
-			fmt.Printf("Failed to read CA data: %s\n", err.Error())
-			os.Exit(3)
-		}
-	}
-
 	for _, ip := range iplist {
 
 		fmt.Printf("\n## Checking %s %s port %d\n", Options.SNI, ip, port)
-		config = getDaneConfig(Options.SNI, ip, port)
+		config = getDaneConfig(ip, port)
 		config.SetTLSA(tlsa)
-
-		if Options.TLSversion != "" {
-			config.TLSversion = TLSstring2version[Options.TLSversion]
-		}
-
-		if Options.CAfile != "" {
-			config.PKIXRootCA = certdata
-		}
 
 		if config.Appname == "" {
 			conn, err = dane.DialTLS(config)
@@ -205,5 +191,5 @@ func main() {
 
 	}
 
-	finalResult(countIP, countSuccess)
+	finalResult(len(iplist), countSuccess)
 }
